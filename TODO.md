@@ -447,6 +447,375 @@ day_50: harsh_winter_begins
 
 ---
 
+## Fundamental Design Questions
+
+### Why Does This City Exist?
+
+**Core Principle**: Cities don't appear randomly. They form around resources, geography, or strategic locations.
+
+#### Starting Conditions (Traditional Mode)
+
+**Option A: Resource-Based Origins**
+Start with a PRIMARY REASON for settlement:
+- **Mining Town** (Gold Rush, Coal, Copper, Silver)
+  - Initial: Mine entrance, 3 shacks, general store, saloon
+  - Economy: Dependent on ore production
+  - Risk: Mine depletion forces transition
+
+- **Port Town** (Trade Hub, Fishing)
+  - Initial: Dock, warehouse, 2 houses, fish market
+  - Economy: Trade routes and fishing
+  - Risk: Trade route changes, overfishing
+
+- **Agricultural Center** (Fertile Land)
+  - Initial: 3 farms, granary, general store
+  - Economy: Food production and export
+  - Risk: Drought, soil depletion
+
+- **Railroad Junction** (Transportation)
+  - Initial: Station, hotel, 2 houses, telegraph office
+  - Economy: Passengers and freight transfer
+  - Risk: Railway company builds bypass
+
+- **Logging Town** (Timber)
+  - Initial: Sawmill, 3 cabins, company store
+  - Economy: Lumber production
+  - Risk: Forest depletion
+
+**Option B: Historical Progression (Like SimCity)**
+- **Era 1: 1850s-1880s** (Old West, Early Industrial)
+  - Buildings: Wood construction, simple infrastructure
+  - Tech: Horse-drawn, gas lamps, telegraph
+  - Challenges: Lawlessness, disease, fire risk
+
+- **Era 2: 1880s-1920s** (Industrial Boom)
+  - Buildings: Brick construction, factories
+  - Tech: Railroads, electricity, telephones
+  - Challenges: Pollution, labor unrest, immigration
+
+- **Era 3: 1920s-1950s** (Modern Era)
+  - Buildings: Steel and concrete, skyscrapers
+  - Tech: Cars, radio, early computers
+  - Challenges: Traffic, suburbanization
+
+- **Era 4: 1950s-Present** (Contemporary)
+  - Buildings: Modern architecture, high-rises
+  - Tech: Internet, mass transit, green energy
+  - Challenges: Sustainability, urban sprawl
+
+**RECOMMENDATION**: Combine both approaches
+- Start scenario specifies initial resource/reason (gold mine, port, etc.)
+- Progress through eras as city grows
+- Player chooses starting era (1850s vs 1950s gives different feel)
+
+#### Starting Conditions (Rebuilder Mode)
+
+Cities already existed for a reason - that reason might be gone or changed:
+- **Fallen Mining Town**: Mine was depleted before the collapse, people stayed anyway
+- **Coastal Ruins**: Port city, but trade routes are destroyed
+- **Industrial Wasteland**: Factory city, but factories are now toxic ruins
+- **Farm Community**: Agricultural center, but fields are overgrown
+
+---
+
+### Resource Management Philosophy
+
+**Goal**: Resources matter, but aren't micromanaged
+
+#### Good Examples to Follow
+- **Dwarf Fortress**: Abstract resource tracking (count of items, not individual tracking)
+- **Banished**: Resources visible in stockpiles, automatic distribution
+- **Frostpunk**: Coal matters deeply but collection is automated
+
+#### Bad Examples to Avoid
+- **Cities: Skylines 2**: "Cursor collecting" - manually gathering factory output
+- **Overly detailed**: Tracking individual ore nuggets or wheat stalks
+
+#### Our Approach: "Macro Resource System"
+
+**High-Level View**:
+```
+Gold Mine (Active)
+├─ Production: 100 ore/month
+├─ Workers: 15/20
+├─ Status: Healthy
+└─ Lifespan: ~15 years remaining (displayed as gauge)
+
+When mine depletes:
+├─ Production drops: 100 → 50 → 20 → 0 over 2 years
+├─ Workers laid off automatically
+├─ City economy affected (tax revenue drops)
+└─ Player notified: "Gold mine production declining"
+```
+
+**Resource Types**:
+1. **Primary Resources** (Why city exists)
+   - Gold ore, coal, timber, fish, grain
+   - Extracted/produced by buildings
+   - Can deplete (mines run dry, forests logged out)
+   - Displayed as stockpile counts
+
+2. **Secondary Resources** (Economic)
+   - Money (taxes, trade)
+   - Building materials (wood, stone, brick)
+   - Goods (food, clothing, tools)
+   - Abstract rather than physical
+
+3. **Intangible Resources** (Quality of Life)
+   - Happiness/satisfaction
+   - Safety
+   - Health
+   - Education
+   - Entertainment
+
+**Resource Depletion Events**:
+```
+Year 15: "Gold mine output declining"
+Year 17: "Prospectors find no new veins"
+Year 18: "Mine production at 10%"
+Year 20: "Gold mine exhausted - closed"
+
+City must adapt:
+- Transition to tourism (historical mining town)
+- Become bedroom community (if near other city)
+- Attract new industry (manufacturing, services)
+- Decline and eventual ghost town (failure condition)
+```
+
+**Player Interaction**:
+- ✅ See resource stockpiles (not individual items)
+- ✅ See production rates (ore/month)
+- ✅ Set priorities (food before luxury goods)
+- ✅ Get warnings about depletion
+- ❌ Don't manually move resources
+- ❌ Don't micromanage workers
+
+---
+
+### Who Is The Player?
+
+**This is a CRITICAL design decision that affects:**
+- What actions are available
+- How the game is framed narratively
+- What constraints exist
+- What feedback makes sense
+
+#### Option 1: The Mayor
+**Powers**:
+- Approve/deny building permits
+- Set tax rates and budgets
+- Pass ordinances (noise limits, pollution rules)
+- Can be voted out if unpopular
+
+**Constraints**:
+- Must balance budget (can't print money)
+- Must win elections (need voter approval)
+- Subject to city charter/laws
+- Can't directly control citizens
+
+**Narrative Frame**: "You are the newly elected mayor of [City Name]..."
+
+**Pros**:
+- ✅ Clear role with defined powers
+- ✅ Political dimension (elections, approval rating)
+- ✅ Realistic constraints
+- ✅ Relatable (everyone knows what mayors do)
+
+**Cons**:
+- ❌ More restrictive (can't just demolish anything)
+- ❌ May be too "realistic" (less creative freedom)
+
+#### Option 2: The Planning Commissioner
+**Powers**:
+- Zone land (residential, commercial, industrial)
+- Approve building designs
+- Plan infrastructure (roads, utilities)
+- Long-term city planning
+
+**Constraints**:
+- Budget set by council (not your decision)
+- Must follow zoning laws
+- Can't tax or spend directly
+
+**Narrative Frame**: "As Planning Commissioner, you shape [City Name]'s future..."
+
+**Pros**:
+- ✅ Focused on building/design (core gameplay)
+- ✅ Less political drama
+- ✅ More creative freedom than Mayor
+
+**Cons**:
+- ❌ Less well-known role
+- ❌ Why do you control everything?
+
+#### Option 3: "The Spirit of the City" (Abstract)
+**Powers**:
+- Omniscient view
+- Can influence anything
+- Not bound by realism
+
+**Constraints**:
+- Resources (money) still matter
+- Buildings take time to construct
+- Citizens have free will (can leave)
+
+**Narrative Frame**: "Guide [City Name] to prosperity..." (no explicit role)
+
+**Pros**:
+- ✅ Maximum creative freedom
+- ✅ No need to justify god powers
+- ✅ Classic city builder approach (SimCity)
+- ✅ Works for both traditional and rebuilder
+
+**Cons**:
+- ❌ Less personal investment
+- ❌ Less narrative coherence
+- ❌ No character to identify with
+
+#### Option 4: Context-Dependent Role
+
+**Traditional Mode**: "The Spirit of the City" (SimCity-style)
+- You're an abstract planner/god
+- Focus on creative building
+- Sandbox feel
+
+**Rebuilder Mode**: "The Leader" (Frostpunk-style)
+- You're the elected/appointed leader of survivors
+- Story-driven scenarios
+- Character you can identify with
+- More personal stakes ("your people" are counting on you)
+
+**Pros**:
+- ✅ Best of both worlds
+- ✅ Mode-appropriate framing
+- ✅ Rebuilder has more narrative weight
+- ✅ Traditional has more creative freedom
+
+**Cons**:
+- ❌ Inconsistent between modes
+
+---
+
+### RECOMMENDATIONS
+
+#### 1. Starting Conditions
+**Traditional Mode**:
+- Player chooses starting scenario:
+  - "Gold Rush, 1860" - Mine + 3 shacks + general store
+  - "Port Town, 1875" - Dock + warehouse + fish market
+  - "Farm Settlement, 1850" - 3 farms + granary + church
+  - "Railroad Junction, 1880" - Station + hotel + telegraph
+- Include 5-8 houses, 2-3 businesses, 1 resource building
+- Include reason for city's existence (displayed in scenario description)
+
+**Rebuilder Mode**:
+- Start with ruins of a city that once had a purpose:
+  - "Fallen Gold Town" - Depleted mine, collapsed buildings
+  - "Coastal Ruins" - Destroyed port, storm damage
+  - "Factory Wasteland" - Abandoned industrial city
+- Show what the city WAS (historical info panel)
+- Resource that existed may still be partially viable
+
+#### 2. Historical Progression
+**Yes, implement era progression**:
+- Start in chosen era (1850s, 1900s, 1950s, 2000s)
+- Unlock buildings and tech as city grows
+- Visual style changes (ASCII chars/colors for different eras)
+  - 1850s: Mostly lowercase and simple chars (. for dirt)
+  - 1900s: Mixed case, more varied (├┤ for structures)
+  - 2000s: Full unicode box-drawing (┌┐└┘)
+- Events tied to eras (gold rush, railroad boom, tech boom)
+
+#### 3. Resources
+**Abstracted but meaningful**:
+- Show stockpile totals (not individual items)
+- Show production rates (100 ore/month)
+- Automatic distribution (no cursor-clicking)
+- Depletion is real and has consequences
+- Warning system ("mine has 5 years left")
+- Force adaptation when resources run out
+
+**Resource Depletion Gameplay**:
+```
+Phase 1 (Boom): Mine is productive, city grows
+Phase 2 (Warning): "Output declining" - 2 years warning
+Phase 3 (Crisis): Mine closes, unemployment rises
+Phase 4 (Adaptation):
+  Option A: Attract new industry → Success
+  Option B: Become ghost town → Failure
+  Option C: Tourism/heritage → Different success
+```
+
+#### 4. Player Role
+**Recommended**: **Context-Dependent**
+
+**Traditional Mode**: "The Planner" (abstract, SimCity-style)
+- You represent the collective will of the citizens
+- No explicit character, pure gameplay
+- Creative sandbox with constraints (money, time)
+- Status messages use passive voice: "Gold mine constructed"
+
+**Rebuilder Mode**: "The Leader" (Frostpunk-style)
+- Named character elected by survivors
+- Story scenarios with personal stakes
+- Active voice: "You order construction of shelter"
+- Dialog from citizens: "Leader, we need food!"
+- Can make moral choices (authoritarian vs democratic)
+
+**Why this works**:
+- Traditional mode = pure gameplay, creative freedom
+- Rebuilder mode = story-driven, emotional investment
+- Each mode gets appropriate framing
+- Shared mechanics work for both
+
+---
+
+### Implementation Example
+
+**Scenario File Structure**:
+```
+# scenarios/traditional/gold_rush_1860.txt
+[scenario]
+name: Gold Rush, 1860
+game_type: traditional
+era: 1860
+player_role: abstract_planner
+reason_for_city: gold_mine
+
+[description]
+Gold has been discovered in the nearby hills! Prospectors are
+arriving daily, and a settlement is forming. As the town planner,
+you must build a city to support the mining operation and the
+fortune-seekers who flock here.
+
+[starting_conditions]
+year: 1860
+population: 50
+buildings: gold_mine=1, shack=5, general_store=1, saloon=1
+resources: gold=0, money=5000, food=100, wood=50
+
+[primary_resource]
+type: gold
+location: gold_mine
+production: 100/month
+depletion_rate: 5%/year
+estimated_lifespan: 20 years
+
+[objectives]
+population_target: 1000
+economic_goal: diversify_before_mine_depletes
+optional: build_railway_connection
+
+[historical_events]
+year_2: gold_strike_bonus  # Extra production
+year_5: railway_proposal     # Connect to national rail
+year_10: mine_decline_warning
+year_15: seek_new_industry
+year_20: mine_depleted
+```
+
+---
+
 ## Notes & Ideas
 
 *Use this section for random thoughts and ideas*
