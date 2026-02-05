@@ -24,9 +24,8 @@ Builder
 
 void Startup(object? sender, GameHost host)
 {
-    // Initialize game state in font test mode
+    // Initialize game state in title screen mode
     gameState = new GameState();
-    gameState.CurrentMode = GameMode.FontTest;
 
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
@@ -41,7 +40,7 @@ void Startup(object? sender, GameHost host)
     Game.Instance.Screen = mainConsole;
 
     // Render initial screen
-    RenderFontTest();
+    RenderTitleScreen();
 }
 
 void OnKeyPressed(IScreenObject console, Keyboard keyboard)
