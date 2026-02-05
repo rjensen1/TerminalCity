@@ -3,6 +3,7 @@ using SadConsole.Configuration;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using TerminalCity.Domain;
+using TerminalCity.UI;
 
 Settings.WindowTitle = "TerminalCity - ASCII City Builder";
 
@@ -46,6 +47,23 @@ void Startup(object? sender, GameHost host)
 void OnKeyPressed(IScreenObject console, Keyboard keyboard)
 {
     if (gameState == null) return;
+
+    // Handle dialog input first (dialogs are modal and block other input)
+    if (gameState.CurrentDialog != null)
+    {
+        foreach (var option in gameState.CurrentDialog.Options)
+        {
+            // Check if the key for this option was pressed
+            var key = Enum.TryParse<Keys>(option.Key, true, out var parsedKey) ? parsedKey : Keys.None;
+            if (key != Keys.None && keyboard.IsKeyPressed(key))
+            {
+                // Handle the dialog response
+                HandleDialogResponse(option.Key);
+                return;
+            }
+        }
+        return; // Block all other input while dialog is open
+    }
 
     // Font test mode
     if (gameState.CurrentMode == GameMode.FontTest)
@@ -112,30 +130,36 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
         // Escape to show exit confirmation
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
-            gameState.CurrentMode = GameMode.ConfirmExit;
-            Render(); // Re-render with confirmation overlay
+            gameState.CurrentDialog = Dialog.CreateYesNo(
+                "Return to Title Screen?",
+                "Press Y to confirm, N to cancel"
+            );
+            Render(); // Re-render with dialog overlay
             return;
         }
 
         Render();
     }
+}
 
-    // Confirm exit mode
-    if (gameState.CurrentMode == GameMode.ConfirmExit)
+void HandleDialogResponse(string optionKey)
+{
+    if (gameState == null || gameState.CurrentDialog == null) return;
+
+    // Handle exit confirmation dialog
+    if (gameState.CurrentDialog.Title == "Return to Title Screen?")
     {
-        if (keyboard.IsKeyPressed(Keys.Y))
+        if (optionKey.ToUpper() == "Y")
         {
-            // Yes - go to title screen
+            gameState.CurrentDialog = null;
             gameState.CurrentMode = GameMode.TitleScreen;
             RenderTitleScreen();
         }
-        else if (keyboard.IsKeyPressed(Keys.N) || keyboard.IsKeyPressed(Keys.Escape))
+        else if (optionKey.ToUpper() == "N")
         {
-            // No - return to playing
-            gameState.CurrentMode = GameMode.Playing;
+            gameState.CurrentDialog = null;
             Render();
         }
-        return;
     }
 }
 
@@ -336,10 +360,10 @@ void Render()
     // Render UI at bottom
     RenderUI(mainConsole, viewportHeight);
 
-    // Render confirmation dialog overlay if in ConfirmExit mode
-    if (gameState.CurrentMode == GameMode.ConfirmExit)
+    // Render modal dialog overlay if one is active
+    if (gameState.CurrentDialog != null)
     {
-        RenderConfirmExitDialog();
+        gameState.CurrentDialog.Render(mainConsole);
     }
 }
 
@@ -388,52 +412,6 @@ void RenderUI(ScreenSurface console, int uiStartY)
             statusMessageTime = null;
         }
     }
-}
-
-void RenderConfirmExitDialog()
-{
-    if (mainConsole == null) return;
-
-    // Draw a dialog box in the center of the screen
-    int dialogWidth = 50;
-    int dialogHeight = 7;
-    int dialogX = (mainConsole.Width - dialogWidth) / 2;
-    int dialogY = (mainConsole.Height - dialogHeight) / 2;
-
-    // Draw semi-transparent dark background for dialog
-    for (int y = dialogY; y < dialogY + dialogHeight; y++)
-    {
-        for (int x = dialogX; x < dialogX + dialogWidth; x++)
-        {
-            mainConsole.Print(x, y, " ", Color.Black, Color.Black * 0.8f);
-        }
-    }
-
-    // Draw border
-    for (int x = dialogX; x < dialogX + dialogWidth; x++)
-    {
-        mainConsole.Print(x, dialogY, "─", Color.White);
-        mainConsole.Print(x, dialogY + dialogHeight - 1, "─", Color.White);
-    }
-    for (int y = dialogY; y < dialogY + dialogHeight; y++)
-    {
-        mainConsole.Print(dialogX, y, "│", Color.White);
-        mainConsole.Print(dialogX + dialogWidth - 1, y, "│", Color.White);
-    }
-    mainConsole.Print(dialogX, dialogY, "┌", Color.White);
-    mainConsole.Print(dialogX + dialogWidth - 1, dialogY, "┐", Color.White);
-    mainConsole.Print(dialogX, dialogY + dialogHeight - 1, "└", Color.White);
-    mainConsole.Print(dialogX + dialogWidth - 1, dialogY + dialogHeight - 1, "┘", Color.White);
-
-    // Draw text
-    string title = "Return to Title Screen?";
-    string prompt = "Press Y to confirm, N to cancel";
-
-    int titleX = dialogX + (dialogWidth - title.Length) / 2;
-    int promptX = dialogX + (dialogWidth - prompt.Length) / 2;
-
-    mainConsole.Print(titleX, dialogY + 2, title, Color.Yellow);
-    mainConsole.Print(promptX, dialogY + 4, prompt, Color.White);
 }
 
 // Input handler component

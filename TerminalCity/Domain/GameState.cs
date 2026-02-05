@@ -1,4 +1,5 @@
 using SadRogue.Primitives;
+using TerminalCity.UI;
 
 namespace TerminalCity.Domain;
 
@@ -13,6 +14,7 @@ public class GameState
     // Game state
     public GameMode CurrentMode { get; set; } = GameMode.TitleScreen;
     public Point CameraPosition { get; set; }
+    public Dialog? CurrentDialog { get; set; } = null; // Modal dialog overlay
 
     // City data
     public Tile[,] Tiles { get; }
@@ -107,6 +109,5 @@ public enum GameMode
     TitleScreen,
     Playing,
     Paused,
-    FontTest,
-    ConfirmExit
+    FontTest
 }
