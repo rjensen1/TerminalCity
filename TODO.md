@@ -482,6 +482,15 @@ Start with a PRIMARY REASON for settlement:
   - Economy: Lumber production
   - Risk: Forest depletion
 
+- **Bedroom Community** (Suburban Spillover) ⭐ NEW
+  - Initial: 10 houses, elementary school, gas station, small store
+  - Economy: Commuters (work in nearby city)
+  - Reason: "Neighboring cities were full" (housing demand overflow)
+  - Context: Proximity to major city (15-30 minutes)
+  - Risk: Dependence on parent city (if it declines, you decline)
+  - Challenge: Develop own identity and economy (or remain bedroom community)
+  - Era: Typically 1950s+ (post-WWII suburban boom)
+
 **Option B: Historical Progression (Like SimCity)**
 - **Era 1: 1850s-1880s** (Old West, Early Industrial)
   - Buildings: Wood construction, simple infrastructure
@@ -813,6 +822,111 @@ year_10: mine_decline_warning
 year_15: seek_new_industry
 year_20: mine_depleted
 ```
+
+**Bedroom Community Scenario**:
+```
+# scenarios/traditional/bedroom_community_1955.txt
+[scenario]
+name: Suburban Spillover, 1955
+game_type: traditional
+era: 1955
+player_role: abstract_planner
+reason_for_city: bedroom_community
+
+[description]
+The neighboring city of Metropolis is bursting at the seams.
+Veterans returning from the war need affordable housing, and
+this former farmland is the perfect location. Just 20 minutes
+from downtown Metropolis by car, you'll create a new suburban
+community for families seeking the American Dream.
+
+[starting_conditions]
+year: 1955
+population: 150
+buildings: house=10, elementary_school=1, gas_station=1, grocery_store=1
+resources: money=15000, building_materials=200
+infrastructure: 2_lane_road_to_metropolis
+
+[parent_city]
+name: Metropolis
+distance: 15 miles
+population: 500000
+jobs_available: unlimited  # For now, commuters always find work
+economic_health: 90%       # Affects your tax revenue
+
+[economic_model]
+primary_income: commuter_taxes  # 70% of residents work in Metropolis
+local_jobs: 15  # Gas station + school + store
+dependence_on_parent: HIGH  # If Metropolis declines, you're in trouble
+
+[objectives]
+population_target: 5000
+economic_goal: develop_local_economy  # Reduce dependence on parent city
+optional:
+  - build_shopping_center    # Creates local jobs
+  - attract_light_industry   # Diversify economy
+  - establish_identity       # Cultural center, parks, unique features
+
+[challenges]
+year_5: traffic_congestion     # Rush hour to Metropolis
+year_10: metropolis_recession  # Parent city struggles, affects you
+year_15: shopping_center_competition  # Big mall in Metropolis hurts local stores
+year_20: decision_point        # Remain bedroom community or develop independence?
+
+[success_paths]
+path_a: bedroom_community      # Accept role, optimize for commuters
+  - Excellent schools
+  - Low crime
+  - Good roads to parent city
+  - Limited local economy
+
+path_b: independent_city       # Develop own economy
+  - Attract businesses
+  - Create job centers
+  - Reduce commuter percentage
+  - Higher risk, higher reward
+
+path_c: balanced_suburb        # Mix of both
+  - Some local jobs
+  - Still tied to parent city
+  - Moderate growth
+```
+
+**Key Gameplay Differences for Bedroom Community**:
+
+1. **No Primary Resource** (like mine/port)
+   - "Resource" is proximity to parent city
+   - Economic engine is commuter taxes
+   - Dependent on parent city's health
+
+2. **Different Challenge Arc**:
+   - Not about resource depletion
+   - About identity and independence
+   - Traffic management is critical
+   - School quality matters (attracts families)
+
+3. **Success Metrics**:
+   - Option A: Be the BEST bedroom community (great schools, low crime, nice parks)
+   - Option B: Achieve economic independence (local jobs, businesses)
+   - Option C: Balanced approach
+
+4. **Realistic Constraints**:
+   - Parent city's economy affects yours
+   - Competition from other suburbs
+   - Need good transportation links
+   - "Why live here vs other suburbs?"
+
+5. **Modern/Relatable**:
+   - Most players live in/near bedroom communities
+   - Familiar challenges (traffic, sprawl, identity)
+   - Not as "romantic" as gold rush, but very real
+
+**This scenario type works perfectly for**:
+- 1950s+ starting eras
+- Players who want modern/familiar setting
+- Less dramatic than resource towns
+- Still has meaningful choices and consequences
+- "This is literally how my town started"
 
 ---
 
