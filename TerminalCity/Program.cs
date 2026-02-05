@@ -109,15 +109,33 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
         {
             gameState.MoveCamera(new Point(1, 0));
         }
-        // Escape to title screen
+        // Escape to show exit confirmation
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
-            gameState.CurrentMode = GameMode.TitleScreen;
-            RenderTitleScreen();
+            gameState.CurrentMode = GameMode.ConfirmExit;
+            Render(); // Re-render with confirmation overlay
             return;
         }
 
         Render();
+    }
+
+    // Confirm exit mode
+    if (gameState.CurrentMode == GameMode.ConfirmExit)
+    {
+        if (keyboard.IsKeyPressed(Keys.Y))
+        {
+            // Yes - go to title screen
+            gameState.CurrentMode = GameMode.TitleScreen;
+            RenderTitleScreen();
+        }
+        else if (keyboard.IsKeyPressed(Keys.N) || keyboard.IsKeyPressed(Keys.Escape))
+        {
+            // No - return to playing
+            gameState.CurrentMode = GameMode.Playing;
+            Render();
+        }
+        return;
     }
 }
 
@@ -317,6 +335,12 @@ void Render()
 
     // Render UI at bottom
     RenderUI(mainConsole, viewportHeight);
+
+    // Render confirmation dialog overlay if in ConfirmExit mode
+    if (gameState.CurrentMode == GameMode.ConfirmExit)
+    {
+        RenderConfirmExitDialog();
+    }
 }
 
 (char glyph, Color foreground, Color background) GetTileAppearance(Tile tile)
@@ -364,6 +388,52 @@ void RenderUI(ScreenSurface console, int uiStartY)
             statusMessageTime = null;
         }
     }
+}
+
+void RenderConfirmExitDialog()
+{
+    if (mainConsole == null) return;
+
+    // Draw a dialog box in the center of the screen
+    int dialogWidth = 50;
+    int dialogHeight = 7;
+    int dialogX = (mainConsole.Width - dialogWidth) / 2;
+    int dialogY = (mainConsole.Height - dialogHeight) / 2;
+
+    // Draw semi-transparent dark background for dialog
+    for (int y = dialogY; y < dialogY + dialogHeight; y++)
+    {
+        for (int x = dialogX; x < dialogX + dialogWidth; x++)
+        {
+            mainConsole.Print(x, y, " ", Color.Black, Color.Black * 0.8f);
+        }
+    }
+
+    // Draw border
+    for (int x = dialogX; x < dialogX + dialogWidth; x++)
+    {
+        mainConsole.Print(x, dialogY, "─", Color.White);
+        mainConsole.Print(x, dialogY + dialogHeight - 1, "─", Color.White);
+    }
+    for (int y = dialogY; y < dialogY + dialogHeight; y++)
+    {
+        mainConsole.Print(dialogX, y, "│", Color.White);
+        mainConsole.Print(dialogX + dialogWidth - 1, y, "│", Color.White);
+    }
+    mainConsole.Print(dialogX, dialogY, "┌", Color.White);
+    mainConsole.Print(dialogX + dialogWidth - 1, dialogY, "┐", Color.White);
+    mainConsole.Print(dialogX, dialogY + dialogHeight - 1, "└", Color.White);
+    mainConsole.Print(dialogX + dialogWidth - 1, dialogY + dialogHeight - 1, "┘", Color.White);
+
+    // Draw text
+    string title = "Return to Title Screen?";
+    string prompt = "Press Y to confirm, N to cancel";
+
+    int titleX = dialogX + (dialogWidth - title.Length) / 2;
+    int promptX = dialogX + (dialogWidth - prompt.Length) / 2;
+
+    mainConsole.Print(titleX, dialogY + 2, title, Color.Yellow);
+    mainConsole.Print(promptX, dialogY + 4, prompt, Color.White);
 }
 
 // Input handler component

@@ -107,5 +107,6 @@ public enum GameMode
     TitleScreen,
     Playing,
     Paused,
-    FontTest
+    FontTest,
+    ConfirmExit
 }
