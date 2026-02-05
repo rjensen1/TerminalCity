@@ -11,6 +11,7 @@ GameState? gameState = null;
 ScreenSurface? mainConsole = null;
 string? statusMessage = null;
 DateTime? statusMessageTime = null;
+bool fontTestRandomMode = true; // Toggle between random and organized display
 
 // Configure and start SadConsole
 Builder
@@ -23,8 +24,9 @@ Builder
 
 void Startup(object? sender, GameHost host)
 {
-    // Initialize game state in title screen mode
+    // Initialize game state in font test mode
     gameState = new GameState();
+    gameState.CurrentMode = GameMode.FontTest;
 
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
@@ -39,12 +41,39 @@ void Startup(object? sender, GameHost host)
     Game.Instance.Screen = mainConsole;
 
     // Render initial screen
-    RenderTitleScreen();
+    RenderFontTest();
 }
 
 void OnKeyPressed(IScreenObject console, Keyboard keyboard)
 {
     if (gameState == null) return;
+
+    // Font test mode
+    if (gameState.CurrentMode == GameMode.FontTest)
+    {
+        if (keyboard.IsKeyPressed(Keys.R))
+        {
+            // Regenerate random tiles
+            RenderFontTest();
+        }
+        else if (keyboard.IsKeyPressed(Keys.M))
+        {
+            // Toggle between random and organized mode
+            fontTestRandomMode = !fontTestRandomMode;
+            RenderFontTest();
+        }
+        else if (keyboard.IsKeyPressed(Keys.T))
+        {
+            // Go to title screen
+            gameState.CurrentMode = GameMode.TitleScreen;
+            RenderTitleScreen();
+        }
+        else if (keyboard.IsKeyPressed(Keys.Escape))
+        {
+            Game.Instance.MonoGameInstance.Exit();
+        }
+        return;
+    }
 
     // Title screen
     if (gameState.CurrentMode == GameMode.TitleScreen)
@@ -154,6 +183,98 @@ void RenderTitleScreen()
         var color = i < 3 ? Color.White : Color.Gray;
         mainConsole.Print(x, instructY + i, instructions[i], color);
     }
+}
+
+void RenderFontTest()
+{
+    if (mainConsole == null) return;
+
+    mainConsole.Clear();
+
+    var random = new Random();
+
+    if (fontTestRandomMode)
+    {
+        // RANDOM MODE: Fill the entire screen with random characters and colors
+        for (int y = 0; y < mainConsole.Height - 5; y++)
+        {
+            for (int x = 0; x < mainConsole.Width; x++)
+            {
+                // Random character from extended ASCII range
+                int charCode = random.Next(33, 256);
+                char randomChar = (char)charCode;
+
+                // Random colors
+                var foreground = new Color(random.Next(256), random.Next(256), random.Next(256));
+                var background = new Color(random.Next(100), random.Next(100), random.Next(100)); // Darker backgrounds
+
+                mainConsole.Print(x, y, randomChar.ToString(), foreground, background);
+            }
+        }
+    }
+    else
+    {
+        // ORGANIZED MODE: Show character ranges in a grid with labels
+        int y = 0;
+        int charsPerRow = 32;
+
+        // Show ASCII ranges in organized rows
+        var ranges = new[]
+        {
+            (32, 63, "ASCII 32-63: Symbols & Numbers"),
+            (64, 95, "ASCII 64-95: Uppercase & Symbols"),
+            (96, 127, "ASCII 96-127: Lowercase & Symbols"),
+            (128, 159, "Extended ASCII 128-159"),
+            (160, 191, "Extended ASCII 160-191"),
+            (192, 223, "Extended ASCII 192-223"),
+            (224, 255, "Extended ASCII 224-255"),
+            (0x2500, 0x251F, "Box Drawing 2500-251F"),
+            (0x2520, 0x253F, "Box Drawing 2520-253F"),
+            (0x2540, 0x255F, "Box Drawing 2540-255F"),
+            (0x2560, 0x257F, "Box Drawing 2560-257F")
+        };
+
+        foreach (var (start, end, label) in ranges)
+        {
+            if (y >= mainConsole.Height - 6) break;
+
+            // Print label
+            mainConsole.Print(0, y, label, Color.Yellow);
+            y++;
+
+            // Print characters in this range
+            int x = 0;
+            for (int charCode = start; charCode <= end && charCode < start + charsPerRow; charCode++)
+            {
+                if (x >= mainConsole.Width) break;
+
+                char ch = (char)charCode;
+                var foreground = Color.White;
+                var background = Color.Black;
+
+                // Show character code below
+                if (y + 1 < mainConsole.Height - 6)
+                {
+                    mainConsole.Print(x * 3, y + 1, charCode.ToString("X2"), Color.Gray, Color.Black);
+                }
+
+                mainConsole.Print(x * 3, y, ch.ToString(), foreground, background);
+                x++;
+            }
+            y += 3; // Space for character code + gap
+        }
+    }
+
+    // Instructions at bottom
+    int instructY = mainConsole.Height - 4;
+    mainConsole.DrawLine(new Point(0, instructY - 1), new Point(mainConsole.Width - 1, instructY - 1), '─', Color.Gray);
+
+    var modeText = fontTestRandomMode ? "RANDOM" : "ORGANIZED";
+    mainConsole.Print(2, instructY, $"FONT TEST MODE - {modeText} - Extended ASCII Character Display", Color.Yellow);
+    mainConsole.Print(2, instructY + 1, "R: Regenerate  |  M: Toggle Mode  |  T: Title Screen  |  ESC: Quit", Color.White);
+    mainConsole.Print(2, instructY + 2, fontTestRandomMode
+        ? "Displaying random chars 33-255 with random colors"
+        : "Displaying organized character ranges with hex codes", Color.Gray);
 }
 
 void Render()

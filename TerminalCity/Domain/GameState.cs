@@ -106,5 +106,6 @@ public enum GameMode
 {
     TitleScreen,
     Playing,
-    Paused
+    Paused,
+    FontTest
 }
