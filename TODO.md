@@ -930,6 +930,478 @@ path_c: balanced_suburb        # Mix of both
 
 ---
 
+## Terrain & Geography Systems
+
+### Core Principle: Geography Constrains City Development
+
+**Real cities are shaped by terrain** - You can't just plop buildings anywhere! Manhattan's famous "two towers" skyline exists because bedrock is close to the surface in Lower Manhattan and Midtown, but deep in between.
+
+### Terrain Properties (Per Tile)
+
+Each tile in the map has multiple properties that affect what can be built:
+
+#### 1. **Bedrock Depth**
+How far down until you hit solid rock:
+- **Shallow** (0-10 feet) - Ideal for heavy buildings
+- **Medium** (10-50 feet) - Good for most construction
+- **Deep** (50-100 feet) - Difficult/expensive for large buildings
+- **Very Deep** (100+ feet) - Skyscrapers need expensive deep foundations
+
+**Building Constraints**:
+```
+Skyscraper (10+ stories):
+- Shallow bedrock: Standard cost
+- Medium bedrock: +25% cost
+- Deep bedrock: +100% cost (deep pilings required)
+- Very Deep: +300% cost or impossible without tech unlock
+
+House (1-2 stories):
+- Any bedrock depth: Standard cost (light building)
+```
+
+**Visual Representation**:
+```
+Map overlay when placing skyscraper:
+. . . # # . .     . = Shallow bedrock (green) - Ideal!
+. # # # # # .     # = Deep bedrock (red) - Expensive!
+# # # # # # #
+. # # . . . .     Lighter tiles = better for tall buildings
+```
+
+**Real-World Example**: Manhattan
+- Downtown (Wall Street): Shallow bedrock → Tall buildings
+- Midtown (42nd St): Shallow bedrock → Tall buildings
+- Between (14th-33rd St): Deep bedrock → Historically shorter buildings
+- Modern tech allows building anywhere, but at great cost
+
+#### 2. **Soil Quality**
+Affects agriculture and foundation stability:
+- **Excellent** (5/5) - Rich, deep topsoil, perfect drainage
+- **Good** (4/5) - Fertile soil, good for farming
+- **Fair** (3/5) - Adequate soil, decent for farming
+- **Poor** (2/5) - Sandy/clay, marginal for crops
+- **Rocky** (1/5) - Thin soil, mostly rock, poor drainage
+
+**Building Constraints**:
+```
+Farm:
+- Excellent soil: 100% productivity
+- Good soil: 80% productivity
+- Fair soil: 60% productivity
+- Poor soil: 30% productivity
+- Rocky soil: Cannot build farm
+
+Large Building (Factory, Mall):
+- Excellent/Good: Standard cost (stable foundation)
+- Fair: +10% cost (some foundation work)
+- Poor: +30% cost (significant foundation work)
+- Rocky: +50% cost (blasting/grading required)
+```
+
+**Visual Representation**:
+```
+Soil quality map:
+█ █ ░ ░ ░ ▒ ▒     █ = Excellent (dark green) - Prime farmland
+█ ░ ░ ░ ▒ ▒ ░     ░ = Good (green) - Good farmland
+░ ░ ░ ▒ ▒ ░ ░     ▒ = Fair/Poor (yellow/brown) - Marginal
+░ ░ ▒ ░ ░ ░ ░     · = Rocky (gray) - No farming
+```
+
+#### 3. **Water Table Depth**
+Affects wells, basements, and drainage:
+- **High** - Water <10 feet down (good for wells, bad for basements)
+- **Medium** - Water 10-50 feet (balanced)
+- **Low** - Water 50-100 feet (need deep wells)
+- **Very Low** - Water 100+ feet (expensive wells or impossible)
+
+**Building Constraints**:
+```
+Well:
+- High water table: Cheap, easy
+- Medium: Standard cost
+- Low: +50% cost (deeper drilling)
+- Very Low: +200% cost or impossible
+
+Building with Basement:
+- High water table: +50% cost (waterproofing, pumps)
+- Medium: Standard cost
+- Low/Very Low: -10% cost (naturally dry)
+```
+
+#### 4. **Elevation & Slope**
+Affects building placement and roads:
+- **Flat** (0-5% grade) - Ideal for everything
+- **Gentle** (5-15% grade) - Fine for buildings, roads more expensive
+- **Steep** (15-30% grade) - Difficult, terracing required
+- **Cliff** (30%+ grade) - Impossible without major earthworks
+
+**Building Constraints**:
+```
+House:
+- Flat: Standard cost
+- Gentle slope: +15% cost (foundation work)
+- Steep slope: +50% cost (terracing, retaining walls)
+- Cliff: Impossible (or +300% with "hillside construction" tech)
+
+Farm:
+- Flat/Gentle: Standard
+- Steep/Cliff: Impossible (soil erosion, can't use equipment)
+
+Road:
+- Flat: $100/tile
+- Gentle: $150/tile
+- Steep: $300/tile (switchbacks, grading)
+- Cliff: $1000/tile (major cutting/filling)
+```
+
+**Visual Representation**:
+```
+Elevation map (ASCII topographic):
+≈ ≈ ≈ ≈ ≈ ≈ ≈     ≈ = Water (blue)
+░ ░ . . ░ ░ ≈     ░ = Flat land (green)
+. . · · . . ░     . = Gentle slope (light green)
+· · ▒ ▒ · · .     · = Steep slope (brown)
+▒ ▒ █ █ ▒ ▒ ·     ▒ = Very steep (dark brown)
+                  █ = Cliff/mountain (gray)
+```
+
+#### 5. **Special Terrain Features**
+
+**Ore Deposits** (for mining):
+- Gold, silver, copper, iron, coal veins
+- Only visible with prospecting/survey
+- Determines mine placement
+- Can be depleted
+
+**Water Bodies**:
+- Rivers: Transport, fishing, water source
+- Lakes: Fishing, recreation, water source
+- Ocean: Ports, trade, fishing
+- Swamps: Disease risk, must be drained
+
+**Forests**:
+- Lumber resource
+- Must be cleared for buildings
+- Can be replanted (sustainable logging)
+
+**Aquifers**:
+- Underground water reserves
+- Affects well productivity
+- Can be depleted (like surface resources)
+
+---
+
+### Building Placement System
+
+#### How It Works
+
+**When Player Selects a Building**:
+1. Enter ghost mode (see through building)
+2. Hover over map
+3. Each tile shows color-coded feedback:
+   - **Green**: Ideal terrain, standard cost
+   - **Yellow**: Possible but more expensive
+   - **Red**: Impossible or prohibitively expensive
+
+**Terrain Info Panel**:
+```
+╔════════════════════════════════════╗
+║ BUILDING: Skyscraper (20 stories) ║
+║ LOCATION: Tile (45, 67)           ║
+╟────────────────────────────────────╢
+║ Bedrock Depth: Deep (~75 feet)    ║
+║   Cost Modifier: +100%            ║
+║                                    ║
+║ Soil Quality: Fair                ║
+║   Cost Modifier: +10%             ║
+║                                    ║
+║ Water Table: Medium               ║
+║   Cost Modifier: +0%              ║
+║                                    ║
+║ Slope: Flat                       ║
+║   Cost Modifier: +0%              ║
+╟────────────────────────────────────╢
+║ BASE COST:    $500,000            ║
+║ MODIFIERS:    +$550,000 (+110%)   ║
+║ TOTAL COST:   $1,050,000          ║
+╚════════════════════════════════════╝
+
+Press Enter to confirm, ESC to cancel
+```
+
+**Multi-Tile Buildings**:
+- Check ALL tiles the building occupies
+- Use worst modifier from any tile
+- Or require ALL tiles meet minimum standard
+- Warn if building spans problematic terrain
+
+#### Building Definitions with Terrain Requirements
+
+**buildings_traditional.txt**:
+```
+[skyscraper_office]
+name: Office Tower (20 stories)
+type: commercial
+width: 3
+height: 4
+cost: 500000
+build_time: 24 months
+
+# Terrain requirements
+bedrock_depth:
+  shallow: 1.0      # Standard cost multiplier
+  medium: 1.25      # +25% cost
+  deep: 2.0         # +100% cost
+  very_deep: 4.0    # +300% cost or impossible
+
+soil_quality:
+  excellent: 1.0
+  good: 1.0
+  fair: 1.1
+  poor: 1.3
+  rocky: 1.5
+
+slope:
+  flat: 1.0
+  gentle: 1.15
+  steep: 1.5
+  cliff: IMPOSSIBLE
+
+min_requirements:
+  bedrock_depth: deep_or_better  # Won't build on very_deep without tech
+  slope: steep_or_flatter        # Can't build on cliffs
+
+[farm_wheat]
+name: Wheat Farm
+type: agricultural
+width: 6
+height: 6
+cost: 5000
+production: wheat
+
+# Terrain requirements
+soil_quality:
+  excellent: 1.0    # 100% productivity
+  good: 0.8         # 80% productivity
+  fair: 0.6         # 60% productivity
+  poor: 0.3         # 30% productivity
+  rocky: IMPOSSIBLE # Can't farm rocks
+
+slope:
+  flat: 1.0
+  gentle: 0.9       # Slight erosion issues
+  steep: IMPOSSIBLE # Can't farm steep hillsides
+  cliff: IMPOSSIBLE
+
+min_requirements:
+  soil_quality: fair_or_better
+  slope: gentle_or_flatter
+
+[house_small]
+name: Small House
+type: residential
+width: 2
+height: 2
+cost: 50000
+
+# Terrain requirements (less strict)
+bedrock_depth:
+  any: 1.0          # Light building, doesn't care
+
+soil_quality:
+  excellent: 1.0
+  good: 1.0
+  fair: 1.05
+  poor: 1.1
+  rocky: 1.2        # Harder foundation, but doable
+
+slope:
+  flat: 1.0
+  gentle: 1.1
+  steep: 1.4
+  cliff: IMPOSSIBLE
+
+water_table:
+  high: 1.2         # Basement flooding risk, waterproofing
+  medium: 1.0
+  low: 1.0
+```
+
+---
+
+### Procedural Terrain Generation
+
+**Starting Scenarios Can Specify Terrain**:
+
+**Gold Rush Town**:
+```
+[terrain]
+base_type: mountainous
+bedrock_depth: varied (shallow in valleys, N/A on mountains)
+soil_quality: poor (rocky mountain soil)
+slope: varied (flat valleys, steep hills)
+special_features: gold_vein_at(25,30), river_at(10-15,0-50)
+
+# This creates interesting constraints:
+# - Gold mine MUST be at (25,30) - not player's choice
+# - Flat land is limited - must build in valleys
+# - Farming is difficult - poor soil
+# - City layout constrained by geography
+```
+
+**Bedroom Community (Flat)**:
+```
+[terrain]
+base_type: plains
+bedrock_depth: medium (consistent)
+soil_quality: excellent (former farmland)
+slope: flat (easy development)
+special_features: highway_connection_at(50,0)
+
+# This creates different gameplay:
+# - Can build anywhere - no terrain constraints
+# - But need to create interesting city layout
+# - Former farms - guilt about paving over good farmland?
+# - Challenge is design, not terrain
+```
+
+**Port Town**:
+```
+[terrain]
+base_type: coastal
+bedrock_depth: shallow (coastal bedrock)
+soil_quality: sandy (poor for farming)
+slope: flat_near_water, hills_inland
+special_features: deep_water_harbor_at(0,25), cliff_coast_at(0,0-20)
+water: ocean_at(0, 0-50)
+
+# Constraints:
+# - Port must be at deep water (0,25)
+# - Cliffs prevent building near shore (0-20)
+# - Hills inland require terracing
+# - Sandy soil = poor farming, must import food
+```
+
+---
+
+### Strategic Depth This Creates
+
+#### 1. **City Layout Constrained by Reality**
+- Can't make perfect grid (like real cities!)
+- Natural areas remain (parks, green space)
+- Neighborhoods develop character based on terrain
+- Historical districts = old flat areas
+- New districts = developed hillsides (more expensive)
+
+#### 2. **Economic Trade-offs**
+- Prime flat land with good soil: Farmland or housing?
+- Shallow bedrock areas: Commercial district premium
+- Hillsides: Expensive to develop, but good views
+- Swampland: Cheap but requires draining
+
+#### 3. **Technology Unlocks**
+```
+Year 1860: Basic construction
+- Can't build on steep slopes
+- Can't build on very deep bedrock
+- Must avoid swamps
+
+Year 1900: Industrial era
+- Dynamite allows hillside terracing
+- Steam drills allow deeper foundations
+- Drainage systems allow swamp development
+
+Year 1950: Modern construction
+- Heavy equipment makes any slope buildable
+- Deep pilings allow very deep bedrock
+- Still expensive, but possible
+
+Year 2000: Advanced engineering
+- Can build almost anywhere
+- Cost modifiers reduced
+- Skyscrapers on former "impossible" terrain
+```
+
+#### 4. **Realism & Education**
+- Players learn why cities look the way they do
+- Understand geography's role in urban development
+- Appreciate engineering challenges
+- "Oh, THAT'S why downtown is here!"
+
+---
+
+### Visual Feedback Systems
+
+#### Terrain Overlay Modes
+
+**Press 'T' to cycle through overlays**:
+
+1. **Normal View** - Buildings and terrain
+2. **Bedrock Depth** - Colors show depth (dark green = shallow, red = deep)
+3. **Soil Quality** - Show farming potential
+4. **Elevation** - Topographic map view
+5. **Slope** - Show buildability (green = flat, red = steep)
+6. **Water Table** - Show well locations and basement risk
+
+**During Building Placement**:
+- Relevant overlay automatically shown
+- Placing farm? Show soil quality
+- Placing skyscraper? Show bedrock depth
+- Placing well? Show water table
+
+#### ASCII Terrain Visualization
+
+**Bedrock Depth Overlay**:
+```
+When placing skyscraper:
+
+Normal view:        Bedrock overlay:
+. . . # # . .       █ █ █ ░ ░ █ █    █ = Shallow (ideal)
+. # # # # # .  -->  █ ░ ░ ░ ░ ░ █    ░ = Medium (ok)
+# # # # # # #       ░ ░ ░ ░ ░ ░ ░    ▒ = Deep (expensive)
+. # # . . . .       █ ░ ░ █ █ █ █    · = Very deep (avoid)
+
+Cursor at (3,1): Deep bedrock - Cost +100%
+```
+
+**Soil Quality (Farm Placement)**:
+```
+Normal view:        Soil overlay:
+. . . ~ ~ . .       █ █ █ · · █ █    █ = Excellent
+. . ~ ~ ~ . .  -->  █ █ ░ ░ ░ █ █    ░ = Good
+~ ~ ~ ~ ~ . .       ░ ░ ░ ░ ░ ░ ░    ▒ = Fair
+. . . . . . .       █ █ █ ░ ░ ░ ░    · = Poor/Rocky
+
+Cursor at (4,1): Good soil - 80% productivity
+```
+
+---
+
+### Implementation Priority
+
+**Phase 1 (Core Mechanics)**:
+- [ ] Tile terrain properties (bedrock, soil, slope)
+- [ ] Building requirements in definition files
+- [ ] Placement validation (can build here?)
+- [ ] Cost modifiers based on terrain
+
+**Phase 2 (Visual Feedback)**:
+- [ ] Terrain overlays (press T to cycle)
+- [ ] Color-coded placement preview (green/yellow/red)
+- [ ] Terrain info panel during placement
+
+**Phase 3 (Procedural Generation)**:
+- [ ] Generate terrain for scenarios
+- [ ] Rivers, mountains, coastlines
+- [ ] Ore deposits for mining towns
+
+**Phase 4 (Advanced)**:
+- [ ] Technology unlocks reduce terrain penalties
+- [ ] Terraforming (level hills, drain swamps)
+- [ ] Dynamic terrain (erosion, earthquakes)
+
+---
+
 ## Notes & Ideas
 
 *Use this section for random thoughts and ideas*
