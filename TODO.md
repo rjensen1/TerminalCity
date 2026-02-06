@@ -385,6 +385,11 @@ day_50: harsh_winter_begins
 - Modal dialog system with box-drawing borders
 - Unit tests for dialog system
 - Font test mode (verify extended ASCII support)
+- Zoom system (5 levels: -2 to +2, 400ft to 25ft per tile)
+- Dirt road rendering with zoom-appropriate characters
+- Map generation from scenario files
+- Time progression system with 4 speed levels (starts paused)
+- Date/time display with auto-pause on interaction (planned)
 
 ### In Progress 🚧
 - Building placement system
@@ -396,6 +401,53 @@ day_50: harsh_winter_begins
 3. Create BuildingMenu UI
 4. Implement ghost building placement
 5. Test with sample buildings (ruins for rebuilder, zones for traditional)
+
+### Future Enhancements 🔮
+
+#### Era-Based Time Scaling
+**Problem:** Historical scenarios (1700s, 1800s) should have slower pace of change than modern/future scenarios (1950s, 2050s).
+
+**Solution:** Adjust time progression based on scenario era:
+- **Pre-1800:** Slower speeds (e.g., Speed 1 = 1 day/tick instead of 8 hours/tick)
+- **1800-1950:** Moderate speeds (current implementation)
+- **1950+:** Faster speeds available (e.g., Speed 4 = 30 days/tick instead of 7)
+
+**Implementation:**
+- Add `era_time_scale` modifier to scenario files
+- Multiply tick advancement by era modifier
+- UI could show "Era-adjusted speed" or just keep it transparent
+
+**Benefit:** Players in 1700s scenarios won't feel stuck in slow-motion for decades of game time, while modern scenarios can fast-forward through decades quickly.
+
+#### Background Tech Tree & Historical Progression
+
+**Concept:** A tech tree that runs in the background (no micromanagement) representing historical/societal changes that affect city building.
+
+**Types of progression:**
+- **Technology:** Electricity, automobiles, air conditioning, internet, renewable energy
+- **Infrastructure:** Paved roads, sewers, highways, mass transit, fiber optic
+- **Policy:** Zoning laws, HOAs, building codes, environmental regulations, tax structures
+- **Social:** Suburbanization, car dependency, telecommuting, work-from-home culture
+- **Economic:** FHA loans, mortgage systems, tax incentives, developer financing
+
+**Example - HOAs:**
+- Not common in 1950s America
+- Become widespread in 1970s+
+- Changes how residential development works (private subdivisions vs public streets)
+- Could unlock new building types or change mechanics
+
+**Key principles:**
+- Automatic progression (player doesn't "research")
+- Viewable (can see what's unlocked/coming)
+- Era-appropriate (techs unlock when historically accurate)
+- Some conditional (e.g., requires population threshold or nearby parent city)
+- Affects available buildings, mechanics, and gameplay systems
+
+**Benefits:**
+- Historical accuracy without micromanagement
+- Gradual unlocking keeps gameplay fresh across decades
+- Educational (shows how cities actually evolved)
+- Scenario variety (1700s plays different than 2050s)
 
 ---
 
@@ -1065,29 +1117,576 @@ Elevation map (ASCII topographic):
                   █ = Cliff/mountain (gray)
 ```
 
-#### 5. **Special Terrain Features**
+#### 5. **Mineral Deposits** (Underground Resources)
 
-**Ore Deposits** (for mining):
-- Gold, silver, copper, iron, coal veins
-- Only visible with prospecting/survey
-- Determines mine placement
-- Can be depleted
+**Core Principle**: Resources exist in the ground, but you don't know where until you survey/prospect.
 
-**Water Bodies**:
-- Rivers: Transport, fishing, water source
-- Lakes: Fishing, recreation, water source
-- Ocean: Ports, trade, fishing
-- Swamps: Disease risk, must be drained
+**Deposit Types**:
+- **Gold** - Precious metal, high value, forms veins
+- **Silver** - Precious metal, moderate value
+- **Copper** - Industrial metal, electrical applications (1900s+)
+- **Iron** - Essential for tools, construction, railroads
+- **Coal** - Fuel for power plants, industry
+- **Oil** - Later eras (1900s+), requires drilling technology
+- **Stone/Granite** - Building material, quarries
+- **Clay** - Bricks, pottery
+- **Limestone** - Cement production
 
-**Forests**:
-- Lumber resource
-- Must be cleared for buildings
-- Can be replanted (sustainable logging)
+**Discovery System**:
+```
+Initial State: All deposits HIDDEN
+- Map shows no mineral information
+- Player must survey to find deposits
 
-**Aquifers**:
-- Underground water reserves
-- Affects well productivity
-- Can be depleted (like surface resources)
+Survey Methods:
+1. Early Era (1850s-1880s):
+   - Hire prospector (costs $500)
+   - Surveys 20x20 area over 6 months
+   - Success rate: 60% (might miss deposits)
+   - Reveals: "Gold vein (small)" or "No ore found"
+
+2. Industrial Era (1880s-1950s):
+   - Geological survey team (costs $2000)
+   - Surveys 50x50 area over 3 months
+   - Success rate: 85%
+   - Reveals: "Gold vein (medium, est. 5000 oz)"
+
+3. Modern Era (1950s+):
+   - Seismic/satellite survey (costs $5000)
+   - Surveys 100x100 area instantly
+   - Success rate: 95%
+   - Reveals: "Gold vein (large, est. 12000 oz, depth 45ft)"
+```
+
+**Visual Representation**:
+```
+Before survey:            After survey:
+. . . . . . .             . . . . . . .
+. ? ? ? ? . .             . . ◊ ◊ . . .  ◊ = Gold deposit (found!)
+. ? ? ? ? . .             . . ◊ ◊ . . .
+. . . . . . .             . . . . . . .
+
+Note: ? = Unsurveyed area (you don't see this)
+      Surveyed areas show deposits or remain empty
+```
+
+**Deposit Properties**:
+```
+[gold_deposit]
+type: gold
+size: medium
+estimated_yield: 5000 oz
+depth: 35 feet
+quality: high       # High quality = easier/cheaper to extract
+
+[coal_deposit]
+type: coal
+size: large
+estimated_yield: 50000 tons
+depth: 120 feet
+quality: medium     # Seam thickness, purity
+```
+
+**Depletion Tracking**:
+- Initial estimate (may be wrong by ±30%)
+- Production tracked: "3500 oz extracted / ~5000 oz estimated"
+- Warning when 80% depleted: "Gold mine nearing exhaustion"
+- Possibility of discovery: "New vein found! +2000 oz estimate"
+
+#### 6. **Water Bodies** (Surface Water)
+
+**Core Principle**: Water is essential for cities. Location relative to water determines city viability.
+
+**River Systems**:
+```
+Properties:
+- Width: 1-5 tiles
+- Flow direction: North, South, East, West
+- Flow rate: Slow, Moderate, Fast
+- Navigability: Small boat, Barge, Ship
+- Flooding: None, Seasonal, Severe
+
+Gameplay Effects:
+- Water source (infinite, no wells needed nearby)
+- Transportation (if navigable: trade bonus)
+- Fishing (food production)
+- Power (water mill, later hydroelectric dam)
+- Flooding risk (expensive to build near, needs levees)
+- Natural boundary (limits expansion)
+
+Visual:
+≈≈≈≈≈≈≈   Small river (1-2 tiles wide)
+≈≈≈≈≈≈≈   Flows north/south
+≈≈≈≈≈≈≈
+
+███████   Large river (5+ tiles wide)
+███████   Dark blue = deep water
+███████   Requires bridges to cross
+```
+
+**Lakes**:
+```
+Properties:
+- Size: Small (10-50 tiles), Medium (50-200), Large (200+)
+- Depth: Shallow, Medium, Deep
+- Water quality: Fresh, Brackish, Salt
+
+Gameplay Effects:
+- Water source (if fresh)
+- Fishing (depends on size/depth)
+- Recreation (parks, beaches increase land value nearby)
+- Transportation (ferries if large enough)
+- Ice in winter (if climate allows)
+
+Visual:
+    ≈≈≈≈≈≈≈
+  ≈≈≈≈≈≈≈≈≈
+ ≈≈≈≈≈≈≈≈≈≈≈
+ ≈≈≈≈≈≈≈≈≈≈≈   Lake (irregular shape)
+  ≈≈≈≈≈≈≈≈≈
+    ≈≈≈≈≈≈
+```
+
+**Ocean/Coast**:
+```
+Properties:
+- Always at map edge (north, south, east, or west)
+- Coast type: Sandy beach, Rocky cliff, Marsh
+- Harbor quality: Excellent, Good, Poor (depth, protection)
+- Tide: Low, Medium, High
+
+Gameplay Effects:
+- Port cities only (enables maritime trade)
+- Fishing (major industry)
+- Tourism (beaches, boardwalks)
+- Naval facilities (1800s+)
+- Hurricane/storm risk (climate dependent)
+- Salt water (not drinkable, need wells/aqueducts)
+
+Visual:
+~~~~~~~~~~~~~~~~~    ~ = Ocean (extends to map edge)
+~~~~~~~~~~~~~~~~~    Infinite water
+~~~~~~~~~~~~~~~~~
+############         # = Coast/beach
+. . . . . . .        . = Land
+```
+
+**Streams**:
+```
+Properties:
+- Very small (1 tile wide)
+- Seasonal (may dry up in summer)
+- Not navigable
+
+Gameplay Effects:
+- Minor water source
+- Can be diverted for irrigation
+- Easy to bridge/cross
+- Can dry up (seasonal gameplay)
+
+Visual:
+. . ~ . . . .    ~ = Stream (single tile)
+. . . ~ . . .    Meanders across land
+. . . . ~ . .
+```
+
+**Swamps/Wetlands**:
+```
+Properties:
+- High water table + poor drainage
+- Difficult terrain
+- Unhealthy (disease risk in early eras)
+
+Gameplay Effects:
+- Cannot build without draining (costs $$)
+- Disease risk increases nearby
+- Natural resources (peat, wild rice)
+- Wildlife habitat (can be preserved as park)
+
+Visual:
+≋ ≋ ≋ ≋ ≋    ≋ = Swamp (wavy water symbol)
+≋ ≋ ≋ ≋ ≋    Green-brown color
+≋ ≋ ≋ ≋ ≋    Must be drained to build
+
+After draining:
+. . . . .    Becomes regular land
+. . . . .    Expensive, takes time
+. . . . .    Unlocked by drainage tech (1800s+)
+```
+
+---
+
+### Climate & Weather Systems
+
+**Core Principle**: Climate is STATIC (doesn't change turn-by-turn), but determines seasonal patterns and building viability.
+
+#### Climate Zones (Based on Latitude)
+
+**Latitude determines base climate**:
+```
+Map Generation:
+- Player or scenario sets latitude: 0° (Equator) to 60° (Far North/South)
+- Latitude determines climate zone
+- Climate affects temperature range, seasons, precipitation
+```
+
+**Climate Zone Chart**:
+```
+LATITUDE  | CLIMATE ZONE      | CHARACTERISTICS
+----------|-------------------|----------------------------------
+0° - 15°  | Tropical          | Hot year-round, wet/dry seasons
+15° - 30° | Subtropical       | Hot summers, mild winters
+30° - 45° | Temperate         | Four distinct seasons
+45° - 55° | Cold Temperate    | Cold winters, short summers
+55° - 60° | Subarctic         | Very cold winters, brief summers
+60°+      | Arctic/Tundra     | Extreme cold, permafrost
+```
+
+#### 1. **Tropical Climate** (0° - 15° Latitude)
+
+**Temperature**:
+- Average: 75-85°F year-round
+- Variation: ±5°F (very stable)
+- Never freezes
+
+**Seasons**:
+- **Wet Season** (6 months): Heavy rain, flooding risk
+- **Dry Season** (6 months): Less rain, drought possible
+- NO winter/snow
+
+**Precipitation**: 80-200 inches/year
+
+**Gameplay Effects**:
+- No heating buildings needed (ever)
+- Cooling/ventilation important
+- Agriculture: Year-round growing season
+- Disease: Higher risk (mosquitos, etc.)
+- Construction: No winter delays
+- Food: Tropical crops (bananas, coffee, sugar)
+
+**Visual Seasons**:
+```
+Wet Season:           Dry Season:
+≈≈≈≈≈≈≈ (flooding)    . . . . . (normal)
+Trees: ████ (lush)    Trees: ░▒▓█ (still green)
+```
+
+#### 2. **Subtropical Climate** (15° - 30° Latitude)
+
+**Temperature**:
+- Summer: 80-95°F
+- Winter: 50-65°F
+- Rare freezing
+
+**Seasons**:
+- **Summer** (4 months): Hot, humid
+- **Fall** (2 months): Pleasant
+- **Winter** (4 months): Mild, some rain
+- **Spring** (2 months): Pleasant
+- Snow: Rare, 0-2 days/year
+
+**Precipitation**: 30-60 inches/year
+
+**Gameplay Effects**:
+- Light heating in winter
+- Cooling in summer
+- Long growing season (9-10 months)
+- Hurricanes possible (if coastal)
+- Mild construction season impact
+
+**Visual Seasons**:
+```
+Summer:      Fall:        Winter:      Spring:
+████ (lush)  ▒▒▒▒ (brown) ░░░░ (bare)  ▒▓██ (buds)
+Hot          Cool         Mild         Warm
+```
+
+#### 3. **Temperate Climate** (30° - 45° Latitude) - **MOST COMMON**
+
+**Temperature**:
+- Summer: 70-85°F
+- Winter: 20-40°F
+- Four distinct seasons
+
+**Seasons**:
+- **Spring** (3 months): 40-65°F, rainy
+- **Summer** (3 months): 70-85°F, warm
+- **Fall** (3 months): 45-65°F, colorful
+- **Winter** (3 months): 20-40°F, snow
+- Snow: 20-40 days/year
+
+**Precipitation**: 30-50 inches/year
+
+**Gameplay Effects**:
+- Heating in winter (significant cost)
+- Cooling in summer (moderate cost)
+- Growing season: 6-7 months (April-October)
+- Snow removal costs in winter
+- Construction delays in winter
+- Beautiful fall colors (tourism bonus)
+- Classic four-season gameplay
+
+**Visual Seasons**:
+```
+Spring:              Summer:
+░▒▓█ (budding)      ████████ (lush green)
+Flowers bloom       Hot, sunny
+
+Fall:                Winter:
+▓▒░░ (orange/red)   ░░░░ (bare branches)
+Harvest time        ≈≈≈≈ (snow on ground)
+```
+
+**Season-Specific Gameplay** (Temperate):
+```
+Spring:
+- Planting season begins
+- Floods possible (snowmelt)
+- Construction season starts
+- Citizens happier (winter ended)
+
+Summer:
+- Peak tourism season
+- Agriculture grows
+- High power usage (AC)
+- Drought possible
+
+Fall:
+- Harvest season
+- Prepare for winter (stockpile coal/wood)
+- Tourism (leaf peeping)
+- Back to school
+
+Winter:
+- Heating costs HIGH
+- Snow removal costs
+- Construction halts (or +50% cost)
+- Ice fishing, winter sports
+- Higher death rate (elderly)
+- Shorter days (more lighting needed)
+```
+
+#### 4. **Cold Temperate Climate** (45° - 55° Latitude)
+
+**Temperature**:
+- Summer: 55-70°F (short)
+- Winter: 0-30°F (long, harsh)
+- Long, brutal winters
+
+**Seasons**:
+- **Spring** (2 months): 35-55°F, late
+- **Summer** (3 months): 55-70°F, brief
+- **Fall** (2 months): 35-55°F, early
+- **Winter** (5 months): 0-30°F, severe
+- Snow: 60-100 days/year
+
+**Precipitation**: 20-40 inches/year (much as snow)
+
+**Gameplay Effects**:
+- Very high heating costs
+- Short growing season (4-5 months only)
+- Long winter = food stockpiling critical
+- Winter construction impossible without tech
+- Insulation important for all buildings
+- Higher building costs (must be insulated)
+
+**Visual Seasons**:
+```
+Brief Spring:        Short Summer:
+░░▒▓ (slow thaw)    ▓███ (green, cool)
+
+Long Winter:
+≈≈≈≈≈≈≈≈ (deep snow)
+░░░░░░░░ (ice)
+```
+
+#### 5. **Subarctic/Arctic Climate** (55°+ Latitude)
+
+**Temperature**:
+- Summer: 40-60°F (very brief)
+- Winter: -20 to 20°F (extreme)
+- Permafrost year-round
+
+**Seasons**:
+- **Summer** (2 months): 40-60°F, midnight sun
+- **Winter** (10 months): -20 to 20°F, polar night
+- Snow: Year-round possible
+
+**Precipitation**: 5-15 inches/year (mostly snow)
+
+**Gameplay Effects**:
+- Extreme heating costs
+- Growing season: 2-3 months only (greenhouse required)
+- All buildings need extreme insulation
+- Construction season: 2 months/year
+- Permafrost makes building difficult/expensive
+- Food must be imported or preserved
+- Extreme challenge mode
+
+**Not recommended for beginner scenarios** - Expert mode only!
+
+---
+
+### Weather Patterns (Static Per Map)
+
+**Core Principle**: Each map has a climate profile that doesn't change, but creates predictable seasonal patterns.
+
+#### Climate Properties (Set at Map Creation)
+
+```
+[scenario_climate]
+latitude: 40°                    # Determines base climate
+climate_zone: temperate
+
+# Temperature (seasonal ranges)
+temperature_summer_avg: 78°F
+temperature_summer_range: 65-90°F
+temperature_winter_avg: 32°F
+temperature_winter_range: 15-50°F
+
+# Precipitation
+precipitation_annual: 42 inches
+precipitation_pattern: even      # even, summer_dry, winter_dry, monsoon
+snow_days_per_year: 25
+
+# Wind
+prevailing_wind: west            # Affects pollution spread
+wind_speed_avg: 8 mph
+wind_speed_range: 2-25 mph
+hurricane_risk: none             # none, low, medium, high (coastal only)
+
+# Special weather
+tornado_risk: low                # Great Plains = high
+drought_risk: medium
+flood_risk: low                  # Near rivers = higher
+```
+
+#### Seasonal Transitions (Automatic)
+
+**Game tracks current season**:
+```csharp
+public enum Season
+{
+    Spring,
+    Summer,
+    Fall,
+    Winter
+}
+
+public class GameState
+{
+    public DateTime CurrentDate { get; set; }
+    public Season CurrentSeason => CalculateSeason();
+    public ClimateZone ClimateZone { get; set; }
+
+    private Season CalculateSeason()
+    {
+        int month = CurrentDate.Month;
+
+        // Temperate climate
+        if (ClimateZone == ClimateZone.Temperate)
+        {
+            return month switch
+            {
+                3 or 4 or 5 => Season.Spring,
+                6 or 7 or 8 => Season.Summer,
+                9 or 10 or 11 => Season.Fall,
+                12 or 1 or 2 => Season.Winter,
+                _ => Season.Summer
+            };
+        }
+
+        // Tropical climate (wet/dry instead of 4 seasons)
+        if (ClimateZone == ClimateZone.Tropical)
+        {
+            return (month >= 5 && month <= 10)
+                ? Season.WetSeason
+                : Season.DrySeason;
+        }
+
+        // ... other climate zones
+    }
+}
+```
+
+**Visual Seasonal Changes**:
+```csharp
+// Trees change color based on season
+Color GetTreeColor(Season season, ClimateZone climate)
+{
+    if (climate == ClimateZone.Tropical)
+        return Color.Green;  // Always green
+
+    return season switch
+    {
+        Season.Spring => Color.LightGreen,
+        Season.Summer => Color.DarkGreen,
+        Season.Fall => Color.Orange,
+        Season.Winter => Color.Gray,  // Bare branches
+        _ => Color.Green
+    };
+}
+
+// Ground changes based on season
+char GetGroundGlyph(Season season, ClimateZone climate)
+{
+    if (climate == ClimateZone.Tropical)
+        return '.';  // Always same
+
+    if (season == Season.Winter && climate != ClimateZone.Subtropical)
+        return '≈';  // Snow on ground
+
+    return '.';  // Normal ground
+}
+```
+
+---
+
+### Seasonal Gameplay Effects
+
+**Climate-Appropriate Seasonal Challenges**:
+
+#### Temperate Climate Example
+
+**Spring**:
+- Agriculture: Planting season
+- Weather: Rain (flooding possible)
+- Economy: Construction resumes
+- Challenge: Spring floods if near river
+
+**Summer**:
+- Agriculture: Growth phase, irrigation needed
+- Weather: Hot (power for AC)
+- Economy: Tourism peak
+- Challenge: Drought possible, heat waves
+
+**Fall**:
+- Agriculture: Harvest season (food production peak)
+- Weather: Pleasant
+- Economy: Prepare for winter
+- Challenge: Early cold snap can hurt crops
+
+**Winter**:
+- Agriculture: Dormant (no food production)
+- Weather: Cold, snow
+- Economy: Heating costs high, construction stops
+- Challenge: Blizzards, ice storms, heating fuel shortages
+
+#### Tropical Climate Example
+
+**Wet Season**:
+- Agriculture: Growth (but flooding risk)
+- Weather: Heavy rain, storms
+- Economy: Tourism lower
+- Challenge: Flooding, disease spread
+
+**Dry Season**:
+- Agriculture: Irrigation critical
+- Weather: Hot, little rain
+- Economy: Tourism high
+- Challenge: Drought, water shortages, fire risk
+
+**NO winter** - Different challenges!
 
 ---
 
@@ -1380,25 +1979,1226 @@ Cursor at (4,1): Good soil - 80% productivity
 ### Implementation Priority
 
 **Phase 1 (Core Mechanics)**:
-- [ ] Tile terrain properties (bedrock, soil, slope)
+- [ ] Tile terrain properties (bedrock, soil, slope, water table)
 - [ ] Building requirements in definition files
 - [ ] Placement validation (can build here?)
 - [ ] Cost modifiers based on terrain
+- [ ] Water bodies (rivers, lakes) as impassable terrain
+- [ ] Basic climate zone selection (temperate default)
 
-**Phase 2 (Visual Feedback)**:
+**Phase 2 (Seasonal System)**:
+- [ ] Date/time tracking system
+- [ ] Season calculation based on climate zone
+- [ ] Visual seasonal changes (tree colors, snow on ground)
+- [ ] Seasonal gameplay effects (heating costs, construction delays)
+- [ ] Climate-appropriate seasons (tropical = wet/dry, temperate = 4 seasons)
+
+**Phase 3 (Visual Feedback)**:
 - [ ] Terrain overlays (press T to cycle)
 - [ ] Color-coded placement preview (green/yellow/red)
 - [ ] Terrain info panel during placement
+- [ ] Climate info panel (current season, temperature)
+- [ ] Season indicator in UI
 
-**Phase 3 (Procedural Generation)**:
-- [ ] Generate terrain for scenarios
+**Phase 4 (Mineral Deposits)**:
+- [ ] Hidden mineral deposits (gold, coal, iron, etc.)
+- [ ] Survey/prospecting system (early/industrial/modern methods)
+- [ ] Mineral deposit properties (size, depth, quality)
+- [ ] Depletion tracking
+- [ ] Discovery events
+
+**Phase 5 (Procedural Generation)**:
+- [ ] Generate terrain for scenarios (based on climate zone)
 - [ ] Rivers, mountains, coastlines
-- [ ] Ore deposits for mining towns
+- [ ] Procedural mineral deposits for mining towns
+- [ ] Climate-appropriate vegetation
+- [ ] Water table generation
 
-**Phase 4 (Advanced)**:
+**Phase 6 (Advanced Weather)**:
+- [ ] Weather events (storms, droughts, blizzards)
+- [ ] Seasonal disasters (hurricanes in subtropical, tornadoes in plains)
+- [ ] Weather affects construction speed
+- [ ] Weather affects citizen happiness
+
+**Phase 7 (Advanced Terrain)**:
 - [ ] Technology unlocks reduce terrain penalties
 - [ ] Terraforming (level hills, drain swamps)
-- [ ] Dynamic terrain (erosion, earthquakes)
+- [ ] Levees/flood control
+- [ ] Irrigation systems
+- [ ] Climate adaptation (greenhouses in cold climates)
+
+---
+
+## Natural Resources & Economic Systems
+
+### Core Principle: Resources Gain Value Over Time
+
+**Key Insight**: Many resources are worthless until technology or demand creates value. A deposit of oil in 1850 is just "smelly ground." By 1900, it's liquid gold.
+
+**Demand Creation**: Building infrastructure creates demand for resources. Build a railroad? Now you need steel, coal, and timber. Build houses? Now you need lumber, brick, and copper.
+
+---
+
+### Primary Resources (Extracted from Nature)
+
+#### Minerals & Metals
+
+**Precious Metals**:
+```
+[gold]
+era_discovered: Ancient (always known)
+primary_use_1850s: Currency, jewelry
+primary_use_1900s: Currency, jewelry, dentistry
+primary_use_1950s: Electronics, aerospace (limited)
+primary_use_2000s: Electronics, computers, jewelry
+extraction: Placer mining → Hard rock mining → Cyanide leaching
+value_trend: High → Stable → Very High (industrial demand)
+depletion: Fast (typically 10-30 years)
+
+[silver]
+era_discovered: Ancient
+primary_use_1850s: Currency, jewelry, mirrors
+primary_use_1900s: Photography, medicine
+primary_use_1950s: Electronics, batteries
+primary_use_2000s: Solar panels, electronics
+extraction: Similar to gold, often co-located
+value_trend: Moderate → Increasing (industrial)
+depletion: Moderate (20-50 years)
+```
+
+**Industrial Metals**:
+```
+[iron]
+era_discovered: Ancient (known, but limited use)
+primary_use_1850s: Tools, wagon parts, limited construction
+primary_use_1900s: RAILROADS, steel production, construction
+primary_use_1950s: Everything (vehicles, buildings, appliances)
+primary_use_2000s: Still essential, some replacement by aluminum
+extraction: Open pit mining → Shaft mining
+technology_unlock: Bessemer process (1860s) makes steel cheap
+demand_spike: 1880s railroad boom = MASSIVE demand increase
+value_trend: Low → HUGE SPIKE (1880s) → Stable High
+note: "Useless ore" → "Most valuable resource" in 30 years!
+
+[copper]
+era_discovered: Ancient
+primary_use_1850s: Pots, coins, limited
+primary_use_1900s: ELECTRICAL WIRING (huge demand spike!)
+primary_use_1950s: Wiring, plumbing, electronics
+primary_use_2000s: Electronics, renewable energy
+extraction: Open pit, smelting required
+technology_unlock: Electricity (1880s) creates demand
+demand_spike: Electrification of cities (1890s-1920s)
+value_trend: Low → SPIKE (electricity) → High
+note: Copper worthless until electricity arrives!
+
+[aluminum]
+era_discovered: 1825 (isolated), but expensive
+primary_use_1850s: NONE (more expensive than gold!)
+primary_use_1900s: Limited (still expensive until 1886)
+primary_use_1950s: Aircraft, vehicles, construction
+primary_use_2000s: Cans, vehicles, construction, electronics
+extraction: Bauxite mining + electrolysis (needs electricity!)
+technology_unlock: Hall-Héroult process (1886) makes cheap
+value_trend: Extremely High → Crash (cheap) → Stable
+note: From luxury metal to commodity in decades
+
+[lead]
+era_discovered: Ancient
+primary_use_1850s: Bullets, pipes, paint
+primary_use_1900s: Batteries, pipes, paint, gasoline additive
+primary_use_1950s: Batteries, radiation shielding
+primary_use_2000s: Batteries (declining due to toxicity)
+value_trend: Moderate → Declining (health concerns)
+note: Value DECREASES as health risks discovered
+
+[zinc]
+era_discovered: Ancient (as alloy)
+primary_use_1850s: Brass, galvanizing (rust prevention)
+primary_use_1900s: Galvanizing, batteries
+primary_use_1950s: Galvanizing, die-casting
+primary_use_2000s: Galvanizing, batteries
+value_trend: Low → Moderate (industrial)
+
+[tin]
+era_discovered: Ancient
+primary_use_1850s: Tinplate, pewter, bronze
+primary_use_1900s: Tin cans (food preservation!)
+primary_use_1950s: Tin cans, solder
+primary_use_2000s: Solder, specialty alloys
+demand_spike: 1890s+ (canned food revolution)
+value_trend: Moderate → High (canning) → Moderate
+```
+
+**Rare/Specialty Metals** (Later Eras):
+```
+[uranium]
+era_discovered: 1789 (isolated), 1938 (fission discovered)
+primary_use_1850s: NONE (unknown use)
+primary_use_1900s: Glass coloring (minimal)
+primary_use_1950s: NUCLEAR WEAPONS, nuclear power
+primary_use_2000s: Nuclear power, medical
+technology_unlock: Nuclear fission (1938)
+value_trend: Worthless → EXTREMELY HIGH (1940s+)
+note: Most dramatic value change - from nothing to strategic resource
+
+[silicon]
+era_discovered: Ancient (as silica/sand), 1824 (pure)
+primary_use_1850s: Glass, sand
+primary_use_1900s: Glass, steel alloy
+primary_use_1950s: Transistors (beginning of revolution)
+primary_use_2000s: COMPUTERS, solar panels, electronics
+technology_unlock: Transistor (1947), integrated circuit (1958)
+value_trend: Worthless (sand!) → EXTREMELY HIGH (tech boom)
+note: Sand → Most valuable material by weight (computer chips)
+
+[rare_earth_elements]
+era_discovered: 1800s-1900s (various)
+primary_use_1850s: NONE
+primary_use_1900s: Limited scientific
+primary_use_1950s: Limited (magnets, glass)
+primary_use_2000s: ESSENTIAL (phones, computers, wind turbines, EVs)
+technology_unlock: Modern electronics (1990s+)
+value_trend: Worthless → Strategic (21st century)
+```
+
+#### Energy Resources
+
+```
+[coal]
+era_discovered: Ancient (known, limited use)
+primary_use_1850s: Home heating, early steam engines
+primary_use_1900s: RAILROADS, steam power, steel production
+primary_use_1950s: Electricity generation, steel
+primary_use_2000s: Electricity (declining), steel
+demand_spike: 1860s-1920s (railroad + industrial boom)
+value_trend: Low → VERY HIGH → High → Declining (climate concerns)
+depletion: Slow (100+ years typically)
+varieties:
+  - Anthracite (hard coal): Best for heating, rare
+  - Bituminous (soft coal): Common, good for power
+  - Lignite (brown coal): Low quality, cheap
+
+[oil/petroleum]
+era_discovered: Ancient (known as seeps), 1859 (first well)
+primary_use_1850s: Lamp fuel (kerosene), grease
+primary_use_1900s: KEROSENE, gasoline (automobile boom!)
+primary_use_1950s: EVERYTHING (gas, diesel, plastics, chemicals)
+primary_use_2000s: Transportation, plastics, chemicals
+technology_unlock: Internal combustion engine (1880s-1900s)
+demand_spike: 1910s-1920s (automobile adoption)
+value_trend: Worthless → Moderate → EXTREMELY HIGH
+note: Ground that "smelled bad" became most valuable land!
+varieties:
+  - Light crude: Easy to refine, high value
+  - Heavy crude: Harder to refine, lower value
+  - Tar sands: Very difficult, only viable when prices high
+
+[natural_gas]
+era_discovered: Ancient (burning seeps)
+primary_use_1850s: Limited (early gas lights in cities)
+primary_use_1900s: Lighting, heating (if available)
+primary_use_1950s: Heating, cooking, some power
+primary_use_2000s: Heating, power generation, petrochemicals
+technology_unlock: Pipeline technology (1890s+)
+value_trend: Worthless (often vented/burned at oil wells) → Moderate → High
+note: Considered waste product of oil drilling until pipelines!
+
+[wood/timber]
+era_discovered: Always (universal)
+primary_use_1850s: Construction, fuel, everything
+primary_use_1900s: Construction, paper, fuel (declining)
+primary_use_1950s: Construction, paper, furniture
+primary_use_2000s: Construction, paper, furniture, biofuel
+technology_unlock: Sawmills (efficiency), paper mills
+value_trend: High → Declining (coal/oil replace fuel) → Stable
+depletion: Fast (forests logged out in 20-40 years)
+renewal: Possible (tree farms, sustainable forestry)
+varieties:
+  - Hardwood (oak, maple): Furniture, flooring, high value
+  - Softwood (pine, spruce): Construction, paper, common
+  - Old growth: Most valuable, rarely renewable
+
+[peat]
+era_discovered: Ancient
+primary_use_1850s: Fuel (Ireland, Netherlands)
+primary_use_1900s: Fuel, soil amendment
+primary_use_1950s: Horticulture, limited fuel
+primary_use_2000s: Horticulture (declining, environmental concerns)
+value_trend: Moderate → Low (better fuels available)
+note: Only valuable where coal/wood scarce
+```
+
+#### Agricultural Resources
+
+```
+[fertile_soil]
+era_discovered: Always (obvious)
+primary_use_1850s: FARMLAND (food production)
+primary_use_1900s: Farmland, but mechanization increases yield
+primary_use_1950s: Intensive farming, chemical fertilizers
+primary_use_2000s: Farming (with concerns about depletion)
+technology_unlock: Crop rotation, fertilizer, tractors
+value_trend: High → Very High (population growth)
+depletion: Slow (soil erosion over decades/centuries)
+note: Never becomes less valuable - always need food!
+
+[wheat]
+climate: Temperate (prefers cold winters, warm summers)
+growing_season: Spring or winter planting
+yield_factors: Soil quality, rainfall, temperature
+use: Bread, pasta, staple food
+era_value: Always high (staple crop)
+
+[corn/maize]
+climate: Warm temperate to subtropical
+growing_season: Late spring to fall
+yield_factors: Water, heat, soil
+use: Food, animal feed, ethanol (2000s+)
+era_value: Moderate → High (industrial uses in modern era)
+
+[cotton]
+climate: Hot, humid (subtropical to temperate)
+growing_season: Long, hot season
+yield_factors: Water, heat, soil
+use: Textiles, clothing
+era_value: VERY HIGH (1850s-1950s) → High (synthetic competition)
+note: "King Cotton" drove much of 1800s Southern economy
+
+[tobacco]
+climate: Warm temperate
+growing_season: Spring to fall
+use: Smoking, chewing
+era_value: Very High (1850s-1950s) → Declining (health concerns)
+note: Like lead, value drops as health risks known
+
+[sugar_cane] (tropical) / [sugar_beets] (temperate)
+climate: Tropical (cane) or temperate (beets)
+use: Sugar, ethanol (modern)
+era_value: High → Very High (always valuable)
+note: Sugar cultivation drives tropical settlement
+
+[coffee] (tropical)
+climate: Tropical highlands
+use: Beverage
+era_value: High → Very High (global commodity)
+
+[rubber] (natural)
+climate: Tropical rainforest
+use: Tires, waterproofing, seals
+era_value: Low → VERY HIGH (1890s-1950s) → Moderate (synthetic)
+technology_unlock: Vulcanization (1839), automobile (1900s)
+demand_spike: Automobile boom creates rubber rush!
+note: Amazon rubber boom (1879-1912) then crash (synthetic rubber)
+```
+
+#### Water Resources
+
+```
+[fresh_water]
+era_discovered: Always (essential)
+primary_use_1850s: Drinking, irrigation, power (mills)
+primary_use_1900s: Drinking, irrigation, industrial processes
+primary_use_1950s: All above + cooling (power plants)
+primary_use_2000s: All above + high tech manufacturing
+value_trend: High → VERY HIGH (population + industry)
+depletion: Possible (aquifer depletion, pollution)
+note: Never becomes less valuable, scarcity increases value
+
+[fish/fishing_grounds]
+location: Rivers, lakes, oceans
+varieties: Freshwater, saltwater, shellfish
+value_trend: High → Declining (overfishing)
+depletion: Fast (20-50 years of heavy fishing)
+renewal: Possible (fishing limits, aquaculture)
+```
+
+---
+
+### Secondary Resources (Processed Materials)
+
+```
+[steel]
+made_from: Iron + coal (coke) + limestone
+era_available: 1860s+ (Bessemer process)
+primary_use: Construction, railroads, machinery, vehicles
+demand_creation:
+  - Railroad construction → Need steel for rails
+  - Skyscraper construction → Need steel frame
+  - Ship building → Need steel plates
+  - Auto industry → Need steel for cars
+note: Steel mill is "demand multiplier" - creates jobs AND demand
+
+[brick]
+made_from: Clay + fire (kilns)
+era_available: Ancient, but industrial production 1800s+
+primary_use: Construction (buildings, chimneys)
+demand_creation: Building houses → Need bricks
+note: Local resource (heavy, expensive to transport)
+
+[cement/concrete]
+made_from: Limestone + clay + water
+era_available: Ancient (Roman), modern Portland cement (1824)
+primary_use: Construction, roads, dams
+demand_creation:
+  - Road building → Need concrete
+  - Skyscraper foundations → Need concrete
+value_trend: Low → High (modern construction essential)
+
+[glass]
+made_from: Sand (silica) + soda ash + limestone
+era_available: Ancient, but cheap flat glass (1900s)
+primary_use: Windows, bottles, containers
+demand_creation: Building with windows → Need glass
+technology_unlock: Float glass process (1952) = cheap flat glass
+
+[paper]
+made_from: Wood pulp (or rags in early era)
+era_available: Ancient (rag paper), 1800s+ (wood pulp)
+primary_use: Books, newspapers, packaging
+demand_creation:
+  - Printing press → Need paper
+  - Packaging → Need paper
+  - Office buildings → Need paper
+value_trend: High (expensive) → Low (cheap) → Moderate
+
+[plastics]
+made_from: Oil/petroleum (petrochemicals)
+era_available: 1900s (Bakelite), 1950s+ (modern plastics)
+primary_use: EVERYTHING (packaging, construction, products)
+demand_creation: Plastic packaging industry creates oil demand
+note: Oil value increases dramatically with plastics industry
+
+[electricity]
+made_from: Coal/oil/gas/hydro/nuclear/solar/wind
+era_available: 1880s+ (commercial power)
+primary_use: Lighting, motors, appliances, everything
+demand_creation:
+  - Electric lights → Need copper wire + power plant
+  - Appliances → Need power plant expansion
+  - Computers → Need massive power
+technology_unlock: Dynamo (1870s), power distribution (1880s)
+note: "Resource" that's produced, not extracted
+```
+
+---
+
+### Demand Creation Chains (Building → Resource Demand)
+
+**Example 1: Railroad Construction** (1860s-1920s)
+```
+Build Railroad
+├─> Need STEEL for rails (high demand)
+│   └─> Need IRON ore (mine/import)
+│   └─> Need COAL for steel production
+│   └─> Need LIMESTONE for smelting
+├─> Need TIMBER for railroad ties (high demand)
+│   └─> Need LOGGING operations
+├─> Need LABOR (construction workers)
+└─> RESULT: Railroad towns boom, resource towns boom
+
+Railroad Operation (ongoing)
+├─> Need COAL for steam engines (1850s-1950s)
+│   └─> Coal towns along route prosper
+├─> Need WATER for boilers
+└─> Creates trade routes (now goods can move cheap)
+```
+
+**Example 2: Residential Housing** (any era)
+```
+Build House (1850s)
+├─> Need TIMBER (framing, floors)
+├─> Need STONE or BRICK (foundation, chimney)
+├─> Need GLASS (windows, minimal)
+├─> Need NAILS (iron)
+└─> RESULT: Lumber mill, quarry, blacksmith all get business
+
+Build House (1920s)
+├─> Need LUMBER (framing)
+├─> Need BRICK (exterior)
+├─> Need GLASS (more windows)
+├─> Need COPPER (electrical wiring!) - NEW DEMAND
+├─> Need IRON (pipes, nails)
+├─> Need CONCRETE (foundation)
+└─> RESULT: Electrician trade emerges, copper mining booms
+
+Build House (2000s)
+├─> Need LUMBER (framing)
+├─> Need DRYWALL (gypsum)
+├─> Need COPPER (wiring)
+├─> Need PLASTIC (pipes, siding, insulation)
+├─> Need GLASS (efficient windows)
+├─> Need CONCRETE (foundation)
+└─> RESULT: Modern construction is complex supply chain
+```
+
+**Example 3: Power Plant**
+```
+Build Coal Power Plant (1900s)
+├─> Need STEEL (boilers, turbines)
+├─> Need CONCRETE (building)
+└─> Need BRICK (smokestack)
+
+Operating Coal Power Plant (ongoing)
+├─> Need COAL constantly (creates mining jobs)
+│   └─> Railroad to transport coal
+│   └─> Mining town prosperity tied to power plant
+├─> Need WATER for cooling
+└─> RESULT: Coal mine has guaranteed customer
+
+Build Nuclear Power Plant (1970s)
+├─> Need massive CONCRETE (containment)
+├─> Need STEEL (reactor vessel)
+└─> Need URANIUM fuel (new resource demand!)
+
+Operating Nuclear Power Plant (ongoing)
+├─> Need URANIUM (small amount, but rare)
+│   └─> Creates uranium mining industry
+├─> Need WATER for cooling
+└─> RESULT: Uranium mining becomes strategic
+```
+
+**Example 4: City Electrification** (1880s-1920s)
+```
+Decide to Electrify City
+├─> Need POWER PLANT (coal/hydro)
+│   └─> See power plant demand above
+├─> Need COPPER WIRE (MASSIVE new demand!)
+│   └─> Copper mines boom
+│   └─> Copper smelters needed
+│   └─> Copper wire factories
+├─> Need POLES (timber)
+│   └─> Logging industry benefits
+├─> Need INSULATORS (glass/ceramic)
+└─> RESULT: Entire copper industry transforms overnight
+
+BEFORE electrification: Copper = pots and coins (low value)
+AFTER electrification: Copper = essential (high value)
+
+This is THE example of technology creating resource value!
+```
+
+**Example 5: Automobile Industry** (1910s-1950s)
+```
+Build Auto Factory
+├─> Need STEEL (body, frame)
+├─> Need RUBBER (tires) - Creates rubber demand
+├─> Need GLASS (windshield)
+├─> Need COPPER (wiring)
+├─> Need LEATHER (seats, early era)
+├─> Need ALUMINUM (engine, modern era)
+└─> RESULT: Complex supply chain
+
+Automobile Adoption (society-wide effect)
+├─> Need OIL/GASOLINE (massive new demand!)
+│   └─> Oil industry transforms
+│   └─> Middle East becomes strategic
+│   └─> Gas stations everywhere
+├─> Need ROADS (concrete/asphalt demand)
+├─> Need RUBBER (tire factories)
+└─> RESULT: Entire economy restructures around cars
+
+Oil value SKYROCKETS due to automobile adoption!
+```
+
+---
+
+### Resource Value Transformation Examples
+
+**The Copper Story** (Most dramatic transformation):
+```
+1850: Copper ore = "That reddish rock" - Value: Low
+      Uses: Pots, coins, some roofing
+      Price: $0.20/pound
+
+1880: Electricity invented, cities start electrifying
+      Copper needed for WIRING - Value: SKYROCKETING
+      Demand: Every city, every building
+      Price: $0.50/pound (2.5x increase)
+
+1920: Every city is electrified, appliances spreading
+      Copper = Essential resource - Value: Very High
+      Price: $0.15/pound (stabilized, but volume is huge)
+
+2020: Electronics, computers, renewable energy
+      Copper still essential - Value: High
+      Price: $4.00/pound (adjusted for inflation, very valuable)
+
+Result: Worthless ore → Strategic resource in 50 years
+```
+
+**The Silicon Story** (Even more dramatic):
+```
+1850: Silicon (as sand/quartz) = Worthless
+      Uses: Glass making (common sand)
+      Value: Free (literally sand on beach)
+
+1900: Silicon = Still basically worthless
+      Uses: Glass, minor steel alloy
+      Value: ~$0
+
+1950: Transistor invented (1947)
+      Silicon can be made into semiconductors
+      Value: Starting to increase
+      Uses: Early electronics (limited)
+
+1970: Integrated circuit revolution
+      Silicon wafers = Computer chips
+      Value: EXTREMELY HIGH
+      Uses: Computers, calculators, everything electronic
+
+2020: Silicon = Most valuable material by weight (chips)
+      Uses: Phones, computers, AI, everything
+      Value: Purified silicon wafer = $100s/pound
+      Computer chip = $1000s/pound equivalent
+
+Result: Beach sand → More valuable than gold (by application)
+        This is THE most dramatic value transformation!
+```
+
+**The Oil Story**:
+```
+1850: Oil seeps = "Land that smells bad"
+      Uses: Limited (lamp oil, medicine grease)
+      Value: Negative (ruins farmland!)
+      Note: People avoid oil seeps
+
+1880: Kerosene for lamps = moderate demand
+      First oil wells drilled
+      Value: Moderate
+      Uses: Lighting, lubrication
+
+1910: Automobile invented and spreading
+      Gasoline (former waste product) = valuable!
+      Value: Rising fast
+      Demand spike!
+
+1950: Post-WWII boom, car culture
+      Oil = Most valuable commodity
+      Uses: Transportation, plastics, chemicals, heating
+      Value: EXTREMELY HIGH
+      Strategic resource, wars fought over it
+
+Result: "Cursed land" → "Black gold" in 60 years
+```
+
+**The Uranium Story** (Fastest transformation):
+```
+1900: Uranium = Obscure element
+      Uses: Glass coloring (makes yellow glass)
+      Value: Very low
+      Mining: Tiny amounts for novelty
+
+1938: Nuclear fission discovered
+      Theoretical: Could be weapon or power source
+      Value: Still low (not yet practical)
+
+1945: Atomic bomb demonstrated
+      Uranium = STRATEGIC WEAPON MATERIAL
+      Value: EXTREMELY HIGH overnight
+      Mining: Uranium rush in American Southwest
+
+1950s: Nuclear power plants start
+      Uranium = Dual use (weapons + power)
+      Value: Very high, but controlled
+      Mining: Government-controlled
+
+Result: Worthless → Strategic resource in 5 years
+        Fastest value transformation in history!
+```
+
+---
+
+### Gameplay Implications
+
+**Resource Discovery**:
+- Start scenario: Some resources known (obvious gold, timber, farmland)
+- Some resources hidden: Survey required (ore deposits)
+- Some resources unknown value: Oil seeps present but "worthless" in 1850
+
+**Technology Unlocks Value**:
+- Oil exists in 1850 but worthless → Automobile (1910s) makes valuable
+- Copper exists but low value → Electricity (1880s) makes essential
+- Silicon exists (sand!) → Transistor (1947) makes valuable
+- Uranium exists but obscure → Fission (1938) makes strategic
+
+**Building Creates Demand**:
+- Build railroad → Need steel, timber, coal
+- Build houses → Need lumber, brick, copper (era-dependent)
+- Build power plant → Need coal or uranium
+- Electrify city → Need massive copper
+
+**Economic Strategy**:
+- Should you develop copper mine in 1850? (Low value NOW, but...)
+- Should you secure oil seeps in 1870? (Worthless NOW, but...)
+- Should you stockpile iron in 1860? (Railroad boom coming...)
+- Speculation and timing matter!
+
+**Depletion Forces Adaptation**:
+- Gold mine depletes → Must find new economic base
+- Forest logged out → Must import timber or switch materials
+- Soil depleted → Must use fertilizer or switch crops
+- Coal mine exhausted → Must find alternative energy
+
+**Trade Networks**:
+- No local iron? Import from mining town
+- No local timber? Import from logging town
+- No local oil? Import from oil town
+- Resource distribution creates interdependence
+
+---
+
+## Zoom & Level of Detail (LOD) System
+
+### Core Principle: Multi-Scale City Viewing
+
+**Real city builders need multiple zoom levels** - You should be able to see the entire city at once (strategic view) or zoom in to see individual buildings and details (tactical view). Buildings need different representations at different scales.
+
+### Zoom Levels
+
+**Four distinct zoom levels**:
+
+#### Zoom 0: City View (Strategic)
+- **Viewport**: 200x80 tiles (entire city or large section)
+- **Camera movement**: Fast scrolling (10 tiles per keypress)
+- **Buildings shown**:
+  - Major landmarks only (city hall, stadium, power plant)
+  - Neighborhoods shown as zones (colored blocks)
+  - Individual houses NOT visible
+  - Roads shown as lines
+- **Use case**: City-wide planning, seeing overall layout
+- **ASCII representation**: Simple, abstract
+```
+Example at Zoom 0:
+████████████     Downtown (commercial district)
+████████████     Each █ = multiple buildings
+░░░░░░░░░░░░     Residential zone
+░░░░░░░░░░░░     Each ░ = neighborhood
+▒▒▒▒▒▒▒▒▒▒▒▒     Industrial zone
+≈≈≈≈≈≈≈≈≈≈≈≈     River
+```
+
+#### Zoom 1: District View (Normal) - **Default**
+- **Viewport**: 120x40 tiles (neighborhood scale)
+- **Camera movement**: Normal scrolling (1 tile per keypress)
+- **Buildings shown**:
+  - Large buildings: 2x2 to 4x4 tiles (office towers, malls)
+  - Medium buildings: 1x2 tiles (shops, apartments)
+  - Small buildings: 1x1 tile (houses, small shops)
+  - Roads between buildings
+- **Use case**: Normal gameplay, building placement
+- **ASCII representation**: Moderate detail
+```
+Example at Zoom 1:
+┌─┐  ┌──┐  ┌─┐     Buildings shown with borders
+│H│  │##│  │H│     H = House (1x1)
+└─┘  │##│  └─┘     ## = Apartment (2x2)
+     └──┘
+─────────────     Road
+```
+
+#### Zoom 2: Neighborhood View (Detailed)
+- **Viewport**: 80x30 tiles (city block scale)
+- **Camera movement**: Slow scrolling (1 tile per keypress)
+- **Buildings shown**:
+  - Large buildings: 4x6 to 8x8 tiles (detailed interiors visible)
+  - Medium buildings: 2x3 tiles (room layout visible)
+  - Small buildings: 2x2 tiles (interior details)
+  - Sidewalks, trees, parking lots
+- **Use case**: Detailed building inspection, micromanagement
+- **ASCII representation**: High detail, interior layouts
+```
+Example at Zoom 2:
+┌────────┐         Large office building (6x4)
+│ ┌──┐   │         Interior divisions visible
+│ │  │ □ │         □ = Desk
+│ └──┘   │         Doors, rooms shown
+│   ∩∩   │         ∩∩ = People
+└────────┘
+```
+
+#### Zoom 3: Building Detail View (Maximum)
+- **Viewport**: 60x20 tiles (single building focus)
+- **Camera movement**: Pixel-precise
+- **Buildings shown**:
+  - Single large building fills screen
+  - Individual rooms and furniture
+  - Citizens/workers visible as characters
+  - Activity/animation details
+- **Use case**: Building management UI, inspecting specific building
+- **ASCII representation**: Maximum detail
+```
+Example at Zoom 3 (House interior):
+┌──────────────────┐
+│ ┌─────┐   ┌────┐ │   Living room + Kitchen
+│ │ ☺   │   │ ▄▄ │ │   ☺ = Citizen
+│ │  ╔══╗  │ ║  ║ │   ╔══╗ = Couch
+│ │  ║  ║  │ ╚══╝ │   ▄▄ = Stove
+│ │  ╚══╝  └────┘ │
+│ └─────┘          │
+│ ┌────────────┐   │   Bedroom
+│ │  ═══       │   │   ═══ = Bed
+│ │            │   │
+│ └────────────┘   │
+└──────────────────┘
+```
+
+---
+
+### Building Definitions with Multiple LOD Representations
+
+Each building defines multiple visual representations for different zoom levels:
+
+**buildings_traditional.txt**:
+```
+[house_small]
+name: Small House
+type: residential
+capacity: 4
+cost: 50000
+
+# LOD 0: City view (not visible individually)
+zoom_0:
+  visible: false           # Don't show individual houses at city view
+  aggregate_as: residential_zone
+
+# LOD 1: District view (default gameplay)
+zoom_1:
+  width: 1
+  height: 1
+  glyph: H
+  color: lightgreen
+  background: darkgreen
+
+# LOD 2: Neighborhood view (more detail)
+zoom_2:
+  width: 2
+  height: 2
+  floor_plan:
+    ┌─┐
+    │H│
+    └─┘
+  colors:
+    border: white
+    interior: brown
+
+# LOD 3: Building detail (interior view)
+zoom_3:
+  width: 8
+  height: 6
+  floor_plan:
+    ┌──────┐
+    │ LR   │   # LR = Living room
+    │  ══  │   # ══ = Couch
+    │──┐ ┌─│
+    │BR│K│   # BR = Bedroom, K = Kitchen
+    └──┴─┘
+  furniture: couch, bed, table, stove
+
+[office_tower]
+name: Office Tower (20 stories)
+type: commercial
+cost: 500000
+
+# LOD 0: City view (major landmark, visible)
+zoom_0:
+  visible: true
+  width: 1
+  height: 1
+  glyph: ▓              # Solid block for skyscraper
+  color: cyan
+
+# LOD 1: District view
+zoom_1:
+  width: 3
+  height: 4
+  floor_plan:
+    ┌─┐
+    │▓│
+    │▓│
+    └─┘
+  color: cyan
+
+# LOD 2: Neighborhood view (detailed)
+zoom_2:
+  width: 6
+  height: 8
+  floor_plan:
+    ┌────┐
+    │┌──┐│
+    ││  ││   # Multiple floors
+    ││  ││
+    ││  ││
+    │└──┘│
+    └────┘
+  entrance_at: (3, 7)
+
+# LOD 3: Building detail (focus on single floor)
+zoom_3:
+  width: 16
+  height: 12
+  show_floor_selector: true    # UI to pick which floor to view
+  floor_plan:
+    ┌──────────────┐
+    │ □ □ □ □ □ □ │   # □ = Desk
+    │ □ □ □ □ □ □ │
+    │              │
+    │ ┌────┐       │
+    │ │CONF│       │   # Conference room
+    │ └────┘       │
+    └──────────────┘
+```
+
+---
+
+### Visibility Thresholds
+
+Buildings have different visibility at different zoom levels:
+
+#### Zoom 0 (City View)
+**Visible**:
+- Major landmarks (city hall, stadium, power plant, university)
+- Industrial complexes
+- Large commercial districts
+- Infrastructure (power lines, highways)
+
+**Hidden**:
+- Individual houses
+- Small shops
+- Parks (unless large)
+- Small roads
+
+**Aggregation**: Small buildings aggregate into zones:
+```
+Instead of:  H H H H H H H H H H
+             H H H H H H H H H H
+             H H H H H H H H H H
+
+Show:        ░░░░░░░░░░░░░░░░░
+             ░░░░░░░░░░░░░░░░░  (Residential zone)
+             ░░░░░░░░░░░░░░░░░
+```
+
+#### Zoom 1 (District View - Default)
+**Visible**:
+- All buildings (at simplified representation)
+- Roads and streets
+- Parks and open spaces
+- Zoning visible
+
+**Detail level**: Building footprints, basic shapes
+
+#### Zoom 2 (Neighborhood View)
+**Visible**:
+- All buildings with interior details
+- Sidewalks, trees, decorations
+- Building entrances/exits
+- Parking areas
+- Citizens (if not too crowded)
+
+**Detail level**: Room layouts, basic furniture
+
+#### Zoom 3 (Building Detail)
+**Visible**:
+- Single building in full detail
+- All furniture and fixtures
+- Individual citizens with names
+- Activity indicators
+- Building stats panel
+
+**Detail level**: Maximum
+
+---
+
+### Camera & Viewport Behavior
+
+#### Zoom Controls
+```csharp
+Keyboard input:
+- '=' or '+': Zoom in (increase zoom level)
+- '-' or '_': Zoom out (decrease zoom level)
+- '0': Reset to default zoom (Zoom 1)
+
+Mouse input (optional):
+- Scroll wheel: Zoom in/out
+- Double-click: Zoom to clicked building
+```
+
+#### Viewport Size Changes
+```csharp
+public class GameState
+{
+    public int ZoomLevel { get; set; } = 1;  // 0-3
+
+    public (int width, int height) GetViewportSize()
+    {
+        return ZoomLevel switch
+        {
+            0 => (200, 80),  // City view - large viewport
+            1 => (120, 40),  // District view - default
+            2 => (80, 30),   // Neighborhood view - medium
+            3 => (60, 20),   // Building detail - small
+            _ => (120, 40)
+        };
+    }
+
+    public int GetCameraSpeed()
+    {
+        return ZoomLevel switch
+        {
+            0 => 10,  // Fast scrolling for city view
+            1 => 1,   // Normal
+            2 => 1,   // Normal
+            3 => 1,   // Precise
+            _ => 1
+        };
+    }
+}
+```
+
+#### Smooth Zoom Transitions
+```csharp
+// When zooming, keep camera centered on current focus
+public void ChangeZoom(int newZoomLevel)
+{
+    var oldCenter = CameraPosition;
+    ZoomLevel = newZoomLevel;
+    CameraPosition = oldCenter;  // Stay centered on same world position
+
+    // Clamp to new viewport bounds
+    ClampCameraToMapBounds();
+}
+```
+
+---
+
+### Building Placement at Different Zooms
+
+#### Zoom 0 (City View)
+- **Can't place buildings** - too zoomed out
+- Zoom in prompt: "Zoom in to place buildings (press +)"
+- Can only view and plan
+
+#### Zoom 1 (District View) - Primary Building Mode
+- **Normal building placement**
+- Ghost building preview
+- Terrain info panel
+- Color-coded placement feedback
+
+#### Zoom 2 (Neighborhood View)
+- **Detailed placement**
+- See exactly where building fits
+- Preview interior layout
+- Better for tight spaces
+
+#### Zoom 3 (Building Detail)
+- **Can't place buildings** - too zoomed in
+- Only for inspection and management
+- Zoom out prompt: "Zoom out to place buildings (press -)"
+
+---
+
+### Rendering Strategy
+
+#### Building Render Priority
+```csharp
+void RenderBuildings(int zoomLevel)
+{
+    foreach (var building in GetVisibleBuildings())
+    {
+        // Check if building should render at this zoom level
+        if (!building.IsVisibleAtZoom(zoomLevel))
+            continue;
+
+        // Get appropriate LOD representation
+        var lodData = building.GetLODData(zoomLevel);
+
+        // Render using LOD-specific data
+        RenderBuildingLOD(building, lodData, zoomLevel);
+    }
+
+    // At Zoom 0, render aggregated zones
+    if (zoomLevel == 0)
+    {
+        RenderAggregatedZones();
+    }
+}
+```
+
+#### Aggregated Zone Rendering (Zoom 0)
+```csharp
+// Group nearby similar buildings into zones
+void RenderAggregatedZones()
+{
+    // Find clusters of residential buildings
+    var residentialClusters = ClusterBuildingsByType(BuildingType.Residential);
+
+    foreach (var cluster in residentialClusters)
+    {
+        // Fill cluster area with zone pattern
+        FillArea(cluster.Bounds, '░', Color.LightGreen, Color.DarkGreen);
+    }
+
+    // Do same for commercial (▒) and industrial (▓)
+}
+```
+
+---
+
+### LOD Performance Benefits
+
+#### Memory Efficiency
+- Only load LOD data for current zoom level
+- Buildings far from camera don't need high detail
+- Huge cities remain performant
+
+#### Rendering Efficiency
+```
+Zoom 0 (City View):
+- 10,000 buildings → 50 major landmarks + 20 zones = 70 draw calls
+
+Zoom 1 (District View):
+- Visible area: 120x40 = 4,800 tiles
+- Maybe 100-200 buildings in view
+- Each building = 1-4 tiles
+
+Zoom 2 (Neighborhood View):
+- Visible area: 80x30 = 2,400 tiles
+- Maybe 20-50 buildings in view
+- Each building = detailed but fewer visible
+
+Zoom 3 (Building Detail):
+- Single building = entire viewport
+- Maximum detail but only 1 building
+```
+
+#### Strategic Depth
+- City planning requires Zoom 0 (strategic overview)
+- Building placement uses Zoom 1 (tactical)
+- Building inspection uses Zoom 2-3 (detailed)
+- Mimics real city planning (maps → blueprints → walk-through)
+
+---
+
+### Visual Examples of Zoom Levels
+
+#### Example: Residential Neighborhood
+
+**Zoom 0 (City View)** - Abstract, zone-based:
+```
+████████████████     Downtown (commercial)
+════════════════     Highway
+░░░░░░░░░░░░░░░░     Residential (your house is one of these ░)
+░░░░░░░░░░░░░░░░     Each ░ represents ~10-20 houses
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒     Industrial zone
+```
+
+**Zoom 1 (District View)** - Individual buildings:
+```
+H H H H H H H H      H = House (1x1)
+ S   H H   S         S = Shop (1x1)
+H H ┌──┐ H H         ┌──┐ = Apartment (2x2)
+H H │AP│ H H         │AP│
+    └──┘
+─────────────────    Road
+```
+
+**Zoom 2 (Neighborhood View)** - Building details:
+```
+┌─┐ ┌─┐ ┌─┐ ┌─┐     Individual houses with roofs
+│H│ │H│ │H│ │H│     Fences, yards visible
+└─┘ └─┘ └─┘ └─┘
+ ∩   ∩   ∩   ∩       Trees between houses
+
+┌────────┐           Larger apartment building
+│ ┌──┐ □ │           Interior rooms visible
+│ │  │   │           □ = Parking
+│ └──┘   │
+└────────┘
+```
+
+**Zoom 3 (Building Detail)** - Single house interior:
+```
+┌──────────────────┐
+│ Living Room      │
+│  ╔══╗   ☺        │  ╔══╗ = Couch
+│  ║  ║            │  ☺ = Resident (John Smith)
+│  ╚══╝   ┌─TV─┐   │
+│         └────┘   │
+├──────┬───────────┤
+│ Kit  │  Bedroom  │
+│ ▄▄▄  │  ═══      │  ▄▄▄ = Counter/Stove
+│      │           │  ═══ = Bed
+└──────┴───────────┘
+
+[Resident: John Smith, Age 34, Happiness: 75%]
+[Employment: Office Worker at Downtown Tower]
+```
+
+---
+
+### Implementation Priority
+
+**Phase 1 (MVP - Single Zoom)**:
+- [x] Current rendering (implicitly Zoom 1)
+- [x] Single representation per building
+- [ ] Make current system "Zoom 1" explicitly
+
+**Phase 2 (Basic Zoom)**:
+- [ ] Add ZoomLevel property to GameState
+- [ ] Implement zoom controls (+/- keys)
+- [ ] Add Zoom 0 (city view) with zone aggregation
+- [ ] Add Zoom 2 (neighborhood view) with more detail
+- [ ] Adjust viewport size based on zoom
+- [ ] Adjust camera speed based on zoom
+
+**Phase 3 (Multi-LOD Buildings)**:
+- [ ] Add LOD data to Building class
+- [ ] Parse zoom_0, zoom_1, zoom_2 from definition files
+- [ ] Render appropriate LOD based on current zoom
+- [ ] Visibility thresholds (hide small buildings at Zoom 0)
+
+**Phase 4 (Advanced)**:
+- [ ] Zoom 3 (building detail) with interior management
+- [ ] Smooth zoom animations
+- [ ] Mouse wheel zoom support
+- [ ] Double-click to zoom to building
+- [ ] Mini-map showing zoom level indicator
+
+---
+
+### Design Considerations
+
+#### Building Definition Complexity
+**Question**: Should every building define all 4 zoom levels?
+
+**Answer**: No, use smart defaults:
+- If zoom_0 not defined: Hide at city view (aggregate into zone)
+- If zoom_1 not defined: Use simplified version of zoom_2
+- If zoom_2 not defined: Scale up zoom_1 representation
+- If zoom_3 not defined: Use zoom_2 with stats panel
+
+**Only major/unique buildings need all 4 LODs**.
+
+#### Zone Aggregation Algorithm
+At Zoom 0, cluster nearby buildings:
+```csharp
+ClusterBuildings()
+{
+    // Find groups of 5+ similar buildings within 10 tiles
+    // Replace with colored zone fill
+    // Label zone with count: "Residential (47 houses)"
+}
+```
+
+#### Performance Target
+- 10,000 buildings in city
+- Zoom 0: Renders in <16ms (60 FPS) - only ~100 elements
+- Zoom 1: Renders in <16ms - only visible buildings (~200)
+- Zoom 2: Renders in <16ms - fewer visible buildings (~50)
+- Zoom 3: Renders in <16ms - single building
+
+ASCII rendering is fast - shouldn't be a problem!
 
 ---
 
@@ -1412,3 +3212,7 @@ Cursor at (4,1): Good soil - 80% productivity
 - Idea: Time-lapse replay of city growth
 - Question: Should buildings have "health" that decays over time?
 - Question: How do we handle multi-tile buildings in ASCII? (use different chars for different parts)
+- Idea: At Zoom 3, show building management UI (assign workers, set policies)
+- Idea: Transition animations between zoom levels (smooth scaling effect)
+- Idea: Zoom level affects time scale (Zoom 0 = fast time, Zoom 3 = pause/slow)
+- Idea: "Tourist mode" - zoom in and watch citizens go about their day

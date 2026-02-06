@@ -1,0 +1,72 @@
+# Suburban Spillover - Bedroom Community Scenario
+# A realistic scenario based on post-WWII suburban expansion
+
+[scenario]
+id: bedroom_community_1955
+name: Suburban Spillover, 1955
+game_type: traditional
+era: 1955
+latitude: 40
+climate_zone: temperate
+
+[description]
+The neighboring city of Metropolis is bursting at the seams. Veterans returning from World War II need affordable housing, and this former farmland—just 20 minutes from downtown Metropolis—is the perfect location for a new suburban community. Your job is to transform these empty fields into a thriving residential town where families can pursue the American Dream.
+
+[backstory]
+The war is over, and America is booming. Young families are leaving crowded city apartments for homes with yards, garages, and the promise of a better life. Metropolis, once able to house everyone, now faces a housing crisis. Developers have their eyes on the flat farmland to the west—land that could become home to thousands. This is your chance to build something from scratch: a planned community that could become a model for suburban living across the nation.
+
+[starting_conditions]
+year: 1955
+population: 0
+money: 25000
+map_size: 100x100
+
+[initial_demand]
+# Demand levels: 0-100 scale
+# High demand = developers want to build, easy to attract
+# Low demand = developers not interested, need incentives
+residential: 85        # Very high - people fleeing crowded Metropolis
+commercial: 70         # High - new residents need stores/services
+industrial: 60         # Moderate - some light industry follows population
+farm: 10               # Very low - farmland being sold off for development
+
+[terrain_generation]
+type: flat_farmland
+features:
+  - existing_road_grid     # Roads already present (farmers use them)
+  - active_farms           # Most land is currently farmed
+  - few_trees              # Cleared for agriculture
+  - rural_character        # Sparse, agricultural feel
+
+[road_grid]
+spacing: 40                # Road spacing in tiles (~0.75 miles at 100ft/tile)
+type: dirt_road            # Basic farm roads (will need upgrading)
+pattern: sparse_grid       # Sparse grid of roads
+main_vertical_road: true   # One main road running north-south through center
+main_horizontal_road: true # One main road running east-west through center
+
+[camera]
+start_position: center     # Start camera at main road intersection
+
+[initial_land_use]
+farm: 85                   # Most land is active farmland
+road: 10                   # Roads connect to neighboring areas
+trees: 3                   # Small tree clusters (windbreaks, property lines)
+empty: 2                   # Cleared but unused
+
+[parent_city]
+name: Metropolis
+distance: 15 miles
+population: 500000
+description: A major industrial city with strong economy and plenty of jobs for commuters
+
+[objectives]
+primary: Reach a population of 1000 residents
+secondary: Build elementary school, establish commercial district
+optional: Maintain low crime rate, create attractive parks
+
+[challenges]
+- Most residents will commute to Metropolis for work
+- Must provide good schools to attract families
+- Traffic management as population grows
+- Developing local economy vs remaining bedroom community

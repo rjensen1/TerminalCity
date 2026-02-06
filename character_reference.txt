@@ -1,0 +1,181 @@
+═══════════════════════════════════════════════════════════════════════════════
+CP437 CHARACTER REFERENCE FOR TERMINALCITY
+These are the 256 characters (0-255) available in the default SadConsole font
+═══════════════════════════════════════════════════════════════════════════════
+
+CONTROL CHARACTERS (0-31) - Not typically printable
+Note: Some may display as symbols in CP437
+
+0-31: Usually not visible or special symbols like ☺ ☻ ♥ ♦ ♣ ♠ • ◘ ○ ◙ ♂ ♀ ♪ ♫ ☼
+
+PRINTABLE ASCII (32-126)
+════════════════════════════════════════════════════════════════════════════════
+
+SPACE & BASIC SYMBOLS (32-47):
+32:   (space)
+33: ! 34: " 35: # 36: $ 37: % 38: & 39: ' 40: ( 41: ) 42: * 43: + 44: , 45: - 46: . 47: /
+
+NUMBERS (48-57):
+48: 0 49: 1 50: 2 51: 3 52: 4 53: 5 54: 6 55: 7 56: 8 57: 9
+
+MORE SYMBOLS (58-64):
+58: : 59: ; 60: < 61: = 62: > 63: ? 64: @
+
+UPPERCASE LETTERS (65-90):
+65: A 66: B 67: C 68: D 69: E 70: F 71: G 72: H 73: I 74: J 75: K 76: L 77: M
+78: N 79: O 80: P 81: Q 82: R 83: S 84: T 85: U 86: V 87: W 88: X 89: Y 90: Z
+
+BRACKETS & MORE (91-96):
+91: [ 92: \ 93: ] 94: ^ 95: _ 96: `
+
+LOWERCASE LETTERS (97-122):
+97: a 98: b 99: c 100: d 101: e 102: f 103: g 104: h 105: i 106: j 107: k 108: l 109: m
+110: n 111: o 112: p 113: q 114: r 115: s 116: t 117: u 118: v 119: w 120: x 121: y 122: z
+
+FINAL SYMBOLS (123-126):
+123: { 124: | 125: } 126: ~
+
+EXTENDED ASCII / CP437 (127-255)
+════════════════════════════════════════════════════════════════════════════════
+
+ACCENTED & SPECIAL (127-175):
+127: ⌂  128: Ç  129: ü  130: é  131: â  132: ä  133: à  134: å  135: ç  136: ê  137: ë
+138: è  139: ï  140: î  141: ì  142: Ä  143: Å  144: É  145: æ  146: Æ  147: ô  148: ö
+149: ò  150: û  151: ù  152: ÿ  153: Ö  154: Ü  155: ¢  156: £  157: ¥  158: ₧  159: ƒ
+160: á  161: í  162: ó  163: ú  164: ñ  165: Ñ  166: ª  167: º  168: ¿  169: ⌐  170: ¬
+171: ½  172: ¼  173: ¡  174: «  175: »
+
+BOX DRAWING - LIGHT (176-179):
+176: ░  (light shade - GOOD FOR ROADS)
+177: ▒  (medium shade - GOOD FOR ROADS)
+178: ▓  (dark shade - GOOD FOR ROADS)
+179: │  (light vertical)
+
+BOX DRAWING - SINGLE LINE (180-191):
+180: ┤  181: ╡  182: ╢  183: ╖  184: ╕  185: ╣  186: ║  187: ╗  188: ╝
+189: ╜  190: ╛  191: ┐
+
+BOX DRAWING - SINGLE LINE CONTINUED (192-197):
+192: └  193: ┴  194: ┬  195: ├  196: ─  (light horizontal - PERFECT FOR THIN ROADS)
+197: ┼
+
+BOX DRAWING - DOUBLE LINE (198-206):
+198: ╞  199: ╟  200: ╚  201: ╔  202: ╩  203: ╦  204: ╠
+205: ═  (double horizontal - PERFECT FOR MEDIUM ROADS)
+206: ╬
+
+BOX DRAWING - MIXED (207-218):
+207: ╧  208: ╨  209: ╤  210: ╥  211: ╙  212: ╘  213: ╒  214: ╓  215: ╫
+216: ╪  217: ┘  218: ┌
+
+BLOCKS & SHAPES (219-223):
+219: █  (full block - PERFECT FOR THICK ROADS/BUILDINGS)
+220: ▄  (lower half block)
+221: ▌  (left half block)
+222: ▐  (right half block)
+223: ▀  (upper half block)
+
+GREEK & MATH (224-239):
+224: α  225: ß  226: Γ  227: π  228: Σ  229: σ  230: µ  231: τ  232: Φ  233: Θ
+234: Ω  235: δ  236: ∞  237: φ  238: ε  239: ∩
+
+MATH & MISC (240-254):
+240: ≡  241: ±  242: ≥  243: ≤  244: ⌠  245: ⌡  246: ÷  247: ≈  248: °  249: ∙
+250: ·  251: √  252: ⁿ  253: ²  254: ■
+
+NBSP (255):
+255:    (non-breaking space)
+
+
+RECOMMENDED CHARACTERS FOR TERMINALCITY
+════════════════════════════════════════════════════════════════════════════════
+
+ROADS (by thickness):
+45: -   (hyphen - very thin)
+196: ─  (light horizontal - thin)
+205: ═  (double horizontal - medium)
+177: ░  (light shade - thicker)
+178: ▒  (medium shade - thicker)
+219: █  (full block - solid/very thick)
+
+INTERSECTIONS:
+43: +   (plus - simple cross)
+197: ┼  (light box cross)
+206: ╬  (double box cross)
+
+TERRAIN:
+46: .   (period - grass/ground)
+126: ~  (tilde - water)
+94: ^   (caret - mountains)
+250: ·  (middle dot - dirt/gravel)
+
+VEGETATION:
+5-6: ♣ ♠  (club/spade suits - trees)
+177: ░  (light shade - forest)
+178: ▒  (medium shade - dense forest)
+
+BUILDINGS:
+219: █  (full block - solid building)
+177: ░  (light shade - low density)
+178: ▒  (medium shade - medium density)
+219: █  (dark shade/full - high density)
+35: #   (hash - generic building)
+
+LETTERS (for zones/markers):
+72: H   (house/home)
+82: R   (residential)
+67: C   (commercial)
+73: I   (industrial)
+80: P   (parking)
+84: T   (tower/transit)
+
+SPECIAL:
+36: $   (money/bank)
+42: *   (important/star)
+64: @   (player/center marker)
+43: +   (hospital/plus/intersection)
+
+
+CURRENTLY USED IN TERMINALCITY (as of debugging)
+════════════════════════════════════════════════════════════════════════════════
+
+ROADS BY ZOOM LEVEL:
+Zoom -2 (400ft): 196 (─) - thin horizontal line
+Zoom -1 (200ft): 205 (═) - double horizontal line
+Zoom  0 (100ft): 177 (░) - light shade
+Zoom  1 (50ft):  178 (▒) - medium shade
+Zoom  2 (25ft):  219 (█) - full block
+
+TERRAIN:
+46: . = Grass
+250: · = Dirt road (alternate)
+126: ~ = Water
+
+OTHER:
+5: ♣ or 6: ♠ = Trees (if using card suits)
+178: ▒ = Farms
+
+
+VISUAL PROGRESSION EXAMPLES
+════════════════════════════════════════════════════════════════════════════════
+
+Road thickness progression (thin to thick):
+45: -
+196: ─
+205: ═
+177: ░
+178: ▒
+219: █
+
+Density progression (sparse to solid):
+32:   (space/empty)
+250: · (dot)
+177: ░ (light)
+178: ▒ (medium)
+219: █ (full)
+
+Building density progression:
+46: .  (empty lot)
+177: ░  (low-rise)
+178: ▒  (mid-rise)
+219: █  (high-rise/skyscraper)

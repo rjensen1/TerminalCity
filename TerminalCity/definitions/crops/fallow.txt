@@ -1,0 +1,66 @@
+# Fallow Crops
+# Fields left unplanted to recover nutrients
+
+[crop]
+id: fallow_plowed
+name: Fallow (Plowed)
+description: Recently plowed field being left to rest. Soil is exposed and turning.
+growth_time: 0            # Fallow doesn't grow
+harvest_yield: 0          # No harvest
+
+# Seasonal appearance - plowed dirt with furrow lines
+[season_spring]
+display_char: ≡
+display_char_code: 240
+color: SaddleBrown
+background_color: Peru
+
+[season_summer]
+display_char: ≡
+display_char_code: 240
+color: Brown
+background_color: Tan
+
+[season_fall]
+display_char: ≡
+display_char_code: 240
+color: DarkGoldenrod
+background_color: Peru
+
+[season_winter]
+display_char: ≡
+display_char_code: 240
+color: DarkSlateGray
+background_color: SlateGray
+
+[crop]
+id: fallow_unplowed
+name: Fallow (Unplowed)
+description: Field left to grow wild grasses and recover naturally. Less labor-intensive than plowing.
+growth_time: 0
+harvest_yield: 0
+
+# Seasonal appearance - grass/weeds growing
+[season_spring]
+display_char: .
+display_char_code: 46
+color: YellowGreen
+background_color: DarkOliveGreen
+
+[season_summer]
+display_char: .
+display_char_code: 46
+color: GreenYellow
+background_color: Olive
+
+[season_fall]
+display_char: .
+display_char_code: 46
+color: DarkKhaki
+background_color: DarkGoldenrod
+
+[season_winter]
+display_char: .
+display_char_code: 46
+color: Tan
+background_color: SaddleBrown

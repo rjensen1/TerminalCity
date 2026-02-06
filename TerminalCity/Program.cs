@@ -3,6 +3,9 @@ using SadConsole.Configuration;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using TerminalCity.Domain;
+using TerminalCity.Generation;
+using TerminalCity.Parsers;
+using TerminalCity.Rendering;
 using TerminalCity.UI;
 
 Settings.WindowTitle = "TerminalCity - ASCII City Builder";
@@ -10,9 +13,12 @@ Settings.WindowTitle = "TerminalCity - ASCII City Builder";
 // Game state
 GameState? gameState = null;
 ScreenSurface? mainConsole = null;
+Scenario? currentScenario = null;
 string? statusMessage = null;
 DateTime? statusMessageTime = null;
 bool fontTestRandomMode = true; // Toggle between random and organized display
+TimeSpan timeAccumulator = TimeSpan.Zero; // Accumulator for throttling updates
+TimeSpan updateInterval = TimeSpan.FromSeconds(1.0); // Update once per second
 
 // Configure and start SadConsole
 Builder
@@ -28,6 +34,10 @@ void Startup(object? sender, GameHost host)
     // Initialize game state in title screen mode
     gameState = new GameState();
 
+    // Load scenario
+    var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+    currentScenario = ScenarioParser.LoadFromFile(scenarioPath);
+
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
     mainConsole.UseKeyboard = true;
@@ -37,11 +47,33 @@ void Startup(object? sender, GameHost host)
     // Set up input handler
     mainConsole.SadComponents.Add(new InputHandler(OnKeyPressed));
 
+    // Set up update handler for game loop
+    mainConsole.SadComponents.Add(new UpdateComponent(OnUpdate));
+
     // Set as active screen
     Game.Instance.Screen = mainConsole;
 
     // Render initial screen
     RenderTitleScreen();
+}
+
+void OnUpdate(IScreenObject console, TimeSpan delta)
+{
+    if (gameState == null) return;
+
+    // Only update when playing
+    if (gameState.CurrentMode == GameMode.Playing)
+    {
+        // Accumulate time and only update at fixed intervals
+        timeAccumulator += delta;
+
+        if (timeAccumulator >= updateInterval)
+        {
+            timeAccumulator -= updateInterval;
+            gameState.AdvanceTime();
+            Render();
+        }
+    }
 }
 
 void OnKeyPressed(IScreenObject console, Keyboard keyboard)
@@ -97,8 +129,23 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
     {
         if (keyboard.IsKeyPressed(Keys.Enter) || keyboard.IsKeyPressed(Keys.Space))
         {
-            gameState.CurrentMode = GameMode.Playing;
-            Render();
+            // Show scenario dialog instead of going directly to game
+            if (currentScenario != null)
+            {
+                ShowScenarioDialog();
+            }
+            else
+            {
+                // Fallback if scenario not loaded
+                gameState.CurrentMode = GameMode.Playing;
+                Render();
+            }
+        }
+        else if (keyboard.IsKeyPressed(Keys.F))
+        {
+            // Enter font test mode
+            gameState.CurrentMode = GameMode.FontTest;
+            RenderFontTest();
         }
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
@@ -127,6 +174,44 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
         {
             gameState.MoveCamera(new Point(1, 0));
         }
+        // Zoom controls
+        else if (keyboard.IsKeyPressed(Keys.OemOpenBrackets)) // [
+        {
+            if (gameState.ZoomLevel > -2)
+            {
+                gameState.ZoomLevel--;
+                statusMessage = $"Zoom: {gameState.GetZoomLevelName()} (1 tile = {gameState.GetTileScale()}ft)";
+                statusMessageTime = DateTime.Now;
+            }
+        }
+        else if (keyboard.IsKeyPressed(Keys.OemCloseBrackets)) // ]
+        {
+            if (gameState.ZoomLevel < 2)
+            {
+                gameState.ZoomLevel++;
+                statusMessage = $"Zoom: {gameState.GetZoomLevelName()} (1 tile = {gameState.GetTileScale()}ft)";
+                statusMessageTime = DateTime.Now;
+            }
+        }
+        // Speed controls
+        else if (keyboard.IsKeyPressed(Keys.OemPlus) || keyboard.IsKeyPressed(Keys.Add)) // + key
+        {
+            if (gameState.GameSpeed < 4)
+            {
+                gameState.GameSpeed++;
+                statusMessage = gameState.GameSpeed == 0 ? "PAUSED" : $"Speed: {gameState.GameSpeed}";
+                statusMessageTime = DateTime.Now;
+            }
+        }
+        else if (keyboard.IsKeyPressed(Keys.OemMinus) || keyboard.IsKeyPressed(Keys.Subtract)) // - key
+        {
+            if (gameState.GameSpeed > 0)
+            {
+                gameState.GameSpeed--;
+                statusMessage = gameState.GameSpeed == 0 ? "PAUSED" : $"Speed: {gameState.GameSpeed}";
+                statusMessageTime = DateTime.Now;
+            }
+        }
         // Escape to show exit confirmation
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
@@ -142,9 +227,103 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
     }
 }
 
+void ShowScenarioDialog()
+{
+    if (gameState == null || currentScenario == null) return;
+
+    var dialog = new Dialog(currentScenario.Name);
+
+    // Add description lines (word wrap for readability)
+    var description = currentScenario.GetFormattedDescription();
+    var words = description.Split(' ');
+    var currentLine = "";
+
+    foreach (var word in words)
+    {
+        if ((currentLine + " " + word).Length > 60)
+        {
+            dialog.AddLine(currentLine.Trim());
+            currentLine = word;
+        }
+        else
+        {
+            currentLine += (currentLine.Length > 0 ? " " : "") + word;
+        }
+    }
+    if (currentLine.Length > 0)
+        dialog.AddLine(currentLine.Trim());
+
+    dialog.AddLine(""); // Empty line
+
+    // Add key info
+    dialog.AddLine($"Year: {currentScenario.StartYear}");
+    dialog.AddLine($"Starting Budget: ${currentScenario.StartMoney:N0}");
+
+    if (currentScenario.ParentCityName != null)
+    {
+        dialog.AddLine($"Near: {currentScenario.ParentCityName} ({currentScenario.ParentCityDistance})");
+    }
+
+    dialog.AddLine(""); // Empty line
+    dialog.AddLine("Ready to begin?");
+    dialog.AddLine(""); // Empty line
+
+    // Add options
+    dialog.AddOption("Enter", "Start Game", Color.Green);
+    dialog.AddOption("Escape", "Back to Title", Color.Gray);
+
+    // Set width for better display
+    dialog.Width = 70;
+
+    gameState.CurrentDialog = dialog;
+    RenderTitleScreen(); // Re-render title screen with dialog overlay
+}
+
 void HandleDialogResponse(string optionKey)
 {
     if (gameState == null || gameState.CurrentDialog == null) return;
+
+    // Handle scenario dialog
+    if (currentScenario != null && gameState.CurrentDialog.Title == currentScenario.Name)
+    {
+        if (optionKey.ToUpper() == "ENTER")
+        {
+            // Start game with scenario conditions
+            gameState.CurrentDialog = null;
+            gameState.Money = currentScenario.StartMoney;
+            gameState.Population = currentScenario.StartPopulation;
+            gameState.CurrentDate = new DateTime(currentScenario.StartYear, 1, 1);
+
+            // Generate initial map from scenario
+            MapGenerator.GenerateFromScenario(gameState, currentScenario);
+
+            // Set camera position based on scenario
+            if (currentScenario.CameraStartPosition == "center")
+            {
+                gameState.CameraPosition = new Point(gameState.MapWidth / 2, gameState.MapHeight / 2);
+            }
+            else if (currentScenario.CameraStartPosition.Contains(','))
+            {
+                var coords = currentScenario.CameraStartPosition.Split(',');
+                if (coords.Length == 2 &&
+                    int.TryParse(coords[0].Trim(), out var x) &&
+                    int.TryParse(coords[1].Trim(), out var y))
+                {
+                    gameState.CameraPosition = new Point(x, y);
+                }
+            }
+
+            gameState.CurrentMode = GameMode.Playing;
+            Render();
+        }
+        else if (optionKey.ToUpper() == "ESCAPE")
+        {
+            // Back to title screen
+            gameState.CurrentDialog = null;
+            RenderTitleScreen();
+        }
+        return;
+    }
 
     // Handle exit confirmation dialog
     if (gameState.CurrentDialog.Title == "Return to Title Screen?")
@@ -203,11 +382,13 @@ void RenderTitleScreen()
     {
         "",
         "Press ENTER or SPACE to start",
+        "Press F for Font Test",
         "Press ESC to quit",
         "",
         "",
         "Controls:",
         "  Arrow Keys or WASD - Move camera",
+        "  [ ] - Zoom in/out",
         "  ESC - Return to title screen",
         "",
         "Coming soon:",
@@ -223,6 +404,12 @@ void RenderTitleScreen()
         int x = (mainConsole.Width - instructions[i].Length) / 2;
         var color = i < 3 ? Color.White : Color.Gray;
         mainConsole.Print(x, instructY + i, instructions[i], color);
+    }
+
+    // Render modal dialog overlay if one is active
+    if (gameState?.CurrentDialog != null)
+    {
+        gameState.CurrentDialog.Render(mainConsole);
     }
 }
 
@@ -327,29 +514,18 @@ void Render()
     // Calculate viewport
     int viewportWidth = mainConsole.Width;
     int viewportHeight = mainConsole.Height - 3; // Reserve 3 rows for UI
-    int startX = gameState.CameraPosition.X - viewportWidth / 2;
-    int startY = gameState.CameraPosition.Y - viewportHeight / 2;
 
-    // Render map
-    for (int screenY = 0; screenY < viewportHeight; screenY++)
+    double renderScale = gameState.GetRenderScale();
+
+    if (renderScale >= 1.0)
     {
-        for (int screenX = 0; screenX < viewportWidth; screenX++)
-        {
-            int worldX = startX + screenX;
-            int worldY = startY + screenY;
-
-            // Out of bounds - render black
-            if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
-            {
-                mainConsole.Print(screenX, screenY, " ", Color.Black, Color.Black);
-                continue;
-            }
-
-            // Get tile and render
-            var tile = gameState.Tiles[worldX, worldY];
-            var (glyph, foreground, background) = GetTileAppearance(tile);
-            mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
-        }
+        // Zoomed in: Each data tile takes up multiple screen tiles
+        RenderZoomedIn(viewportWidth, viewportHeight, (int)renderScale);
+    }
+    else
+    {
+        // Zoomed out: Skip tiles, show less detail
+        RenderZoomedOut(viewportWidth, viewportHeight, renderScale);
     }
 
     // Render camera position indicator
@@ -367,12 +543,370 @@ void Render()
     }
 }
 
+void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
+{
+    if (gameState == null || mainConsole == null) return;
+
+    // Calculate how many data tiles we can see
+    int dataTilesWide = viewportWidth / scale;
+    int dataTilesHigh = viewportHeight / scale;
+
+    int startX = gameState.CameraPosition.X - dataTilesWide / 2;
+    int startY = gameState.CameraPosition.Y - dataTilesHigh / 2;
+
+    for (int dataY = 0; dataY < dataTilesHigh; dataY++)
+    {
+        for (int dataX = 0; dataX < dataTilesWide; dataX++)
+        {
+            int worldX = startX + dataX;
+            int worldY = startY + dataY;
+
+            // Check bounds
+            if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
+            {
+                // Fill this data tile's screen space with black
+                for (int sy = 0; sy < scale; sy++)
+                {
+                    for (int sx = 0; sx < scale; sx++)
+                    {
+                        int screenX = dataX * scale + sx;
+                        int screenY = dataY * scale + sy;
+                        if (screenX < viewportWidth && screenY < viewportHeight)
+                            mainConsole.Print(screenX, screenY, " ", Color.Black, Color.Black);
+                    }
+                }
+                continue;
+            }
+
+            var tile = gameState.Tiles[worldX, worldY];
+
+            // Roads need smart rendering based on neighbors when scale > 1
+            // At scale == 1, just render as single glyph
+            if ((tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad) && scale > 1)
+            {
+                RenderRoadZoomedIn(dataX, dataY, scale, worldX, worldY, viewportWidth, viewportHeight, tile.Type);
+            }
+            else
+            {
+                // All tiles (including roads at scale=1) fill the scaled area with their glyph
+                var (glyph, foreground, background) = GetTileAppearance(tile);
+
+                // For roads at scale=1, detect direction and use appropriate glyph
+                if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+                {
+                    bool hasNorth = worldY > 0 && IsRoadTile(gameState.Tiles[worldX, worldY - 1].Type);
+                    bool hasSouth = worldY < gameState.MapHeight - 1 && IsRoadTile(gameState.Tiles[worldX, worldY + 1].Type);
+                    bool hasWest = worldX > 0 && IsRoadTile(gameState.Tiles[worldX - 1, worldY].Type);
+                    bool hasEast = worldX < gameState.MapWidth - 1 && IsRoadTile(gameState.Tiles[worldX + 1, worldY].Type);
+
+                    bool isIntersection = (hasNorth || hasSouth) && (hasWest || hasEast);
+
+                    if (isIntersection)
+                    {
+                        glyph = RoadRenderer.GetIntersectionChar(gameState.ZoomLevel);
+                    }
+                    else
+                    {
+                        bool isVertical = (hasNorth || hasSouth) && !(hasWest || hasEast);
+                        (glyph, foreground, background) = RoadRenderer.GetRoadAppearance(tile.Type, gameState.ZoomLevel, isVertical);
+                    }
+                }
+
+                for (int sy = 0; sy < scale; sy++)
+                {
+                    for (int sx = 0; sx < scale; sx++)
+                    {
+                        int screenX = dataX * scale + sx;
+                        int screenY = dataY * scale + sy;
+                        if (screenX < viewportWidth && screenY < viewportHeight)
+                            mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY, int viewportWidth, int viewportHeight, TileType roadType)
+{
+    if (gameState == null || mainConsole == null) return;
+
+    // First, fill the entire scaled block with grass (road verge/shoulder)
+    var naturalGround = Color.Green;
+    var naturalGroundDark = Color.DarkGreen;
+    for (int sy = 0; sy < scale; sy++)
+    {
+        for (int sx = 0; sx < scale; sx++)
+        {
+            int screenX = dataX * scale + sx;
+            int screenY = dataY * scale + sy;
+            if (screenX < viewportWidth && screenY < viewportHeight)
+                mainConsole.Print(screenX, screenY, ".", naturalGround, naturalGroundDark);
+        }
+    }
+
+    // Check neighbors to see which directions the road continues
+    bool hasNorth = worldY > 0 && IsRoadTile(gameState.Tiles[worldX, worldY - 1].Type);
+    bool hasSouth = worldY < gameState.MapHeight - 1 && IsRoadTile(gameState.Tiles[worldX, worldY + 1].Type);
+    bool hasWest = worldX > 0 && IsRoadTile(gameState.Tiles[worldX - 1, worldY].Type);
+    bool hasEast = worldX < gameState.MapWidth - 1 && IsRoadTile(gameState.Tiles[worldX + 1, worldY].Type);
+
+    // Get road appearance for this zoom level (horizontal and vertical)
+    var (hRoadGlyph, hForeground, hBackground) = RoadRenderer.GetRoadAppearance(roadType, gameState.ZoomLevel, isVertical: false);
+    var (vRoadGlyph, vForeground, vBackground) = RoadRenderer.GetRoadAppearance(roadType, gameState.ZoomLevel, isVertical: true);
+
+    // Get matching intersection character for this zoom level
+    char intersectionChar = RoadRenderer.GetIntersectionChar(gameState.ZoomLevel);
+
+    // Check if this is an intersection
+    bool isIntersection = (hasNorth || hasSouth) && (hasWest || hasEast);
+
+    // Draw road through the middle of the scaled block
+    int midX = scale / 2;
+    int midY = scale / 2;
+
+    // Draw vertical road segments
+    if (hasNorth || hasSouth)
+    {
+        // Vertical road - draw down the middle column
+        for (int sy = 0; sy < scale; sy++)
+        {
+            int screenX = dataX * scale + midX;
+            int screenY = dataY * scale + sy;
+            if (screenX < viewportWidth && screenY < viewportHeight)
+                mainConsole.Print(screenX, screenY, vRoadGlyph.ToString(), vForeground, vBackground);
+        }
+    }
+
+    // Draw horizontal road segments
+    if (hasWest || hasEast)
+    {
+        // Horizontal road - draw across the middle row
+        for (int sx = 0; sx < scale; sx++)
+        {
+            int screenX = dataX * scale + sx;
+            int screenY = dataY * scale + midY;
+            if (screenX < viewportWidth && screenY < viewportHeight)
+                mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), hForeground, hBackground);
+        }
+    }
+
+    // Draw intersection marker ONLY at the exact center point
+    if (isIntersection)
+    {
+        int screenX = dataX * scale + midX;
+        int screenY = dataY * scale + midY;
+        if (screenX < viewportWidth && screenY < viewportHeight)
+            mainConsole.Print(screenX, screenY, intersectionChar.ToString(), hForeground, hBackground);
+    }
+
+    // If no neighbors (isolated road tile), use horizontal road character
+    if (!hasNorth && !hasSouth && !hasWest && !hasEast)
+    {
+        int screenX = dataX * scale + midX;
+        int screenY = dataY * scale + midY;
+        if (screenX < viewportWidth && screenY < viewportHeight)
+            mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), hForeground, hBackground);
+    }
+}
+
+bool IsRoadTile(TileType type)
+{
+    return type == TileType.DirtRoad || type == TileType.PavedRoad;
+}
+
+void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
+{
+    if (gameState == null || mainConsole == null) return;
+
+    // How many data tiles to skip
+    int skipFactor = (int)(1.0 / scale);
+
+    // Calculate how many data tiles we can see
+    int dataTilesWide = viewportWidth * skipFactor;
+    int dataTilesHigh = viewportHeight * skipFactor;
+
+    int startX = gameState.CameraPosition.X - dataTilesWide / 2;
+    int startY = gameState.CameraPosition.Y - dataTilesHigh / 2;
+
+    for (int screenY = 0; screenY < viewportHeight; screenY++)
+    {
+        for (int screenX = 0; screenX < viewportWidth; screenX++)
+        {
+            // Sample every Nth tile
+            int worldX = startX + (screenX * skipFactor);
+            int worldY = startY + (screenY * skipFactor);
+
+            // Out of bounds
+            if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
+            {
+                mainConsole.Print(screenX, screenY, " ", Color.Black, Color.Black);
+                continue;
+            }
+
+            var tile = gameState.Tiles[worldX, worldY];
+            int actualRoadX = worldX;  // Track actual road position for direction detection
+            int actualRoadY = worldY;
+
+            // At 200ft zoom (zoom -1), ensure dirt roads are always visible even if sampling skips them
+            if (gameState.ZoomLevel == -1 && tile.Type != TileType.DirtRoad && tile.Type != TileType.PavedRoad)
+            {
+                // First pass: look for intersections (prioritize these)
+                bool foundRoad = false;
+                for (int dy = 0; dy < skipFactor && !foundRoad; dy++)
+                {
+                    for (int dx = 0; dx < skipFactor && !foundRoad; dx++)
+                    {
+                        int checkX = worldX + dx;
+                        int checkY = worldY + dy;
+
+                        if (checkX < gameState.MapWidth && checkY < gameState.MapHeight)
+                        {
+                            var checkTile = gameState.Tiles[checkX, checkY];
+                            if (checkTile.Type == TileType.DirtRoad)
+                            {
+                                // Check if this road tile is an intersection
+                                bool hasNorth = checkY > 0 && IsRoadTile(gameState.Tiles[checkX, checkY - 1].Type);
+                                bool hasSouth = checkY < gameState.MapHeight - 1 && IsRoadTile(gameState.Tiles[checkX, checkY + 1].Type);
+                                bool hasWest = checkX > 0 && IsRoadTile(gameState.Tiles[checkX - 1, checkY].Type);
+                                bool hasEast = checkX < gameState.MapWidth - 1 && IsRoadTile(gameState.Tiles[checkX + 1, checkY].Type);
+                                bool isIntersection = (hasNorth || hasSouth) && (hasWest || hasEast);
+
+                                if (isIntersection)
+                                {
+                                    // Found an intersection - use this!
+                                    tile = checkTile;
+                                    actualRoadX = checkX;
+                                    actualRoadY = checkY;
+                                    foundRoad = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Second pass: if no intersection found, take any dirt road
+                if (!foundRoad)
+                {
+                    for (int dy = 0; dy < skipFactor && !foundRoad; dy++)
+                    {
+                        for (int dx = 0; dx < skipFactor && !foundRoad; dx++)
+                        {
+                            int checkX = worldX + dx;
+                            int checkY = worldY + dy;
+
+                            if (checkX < gameState.MapWidth && checkY < gameState.MapHeight)
+                            {
+                                var checkTile = gameState.Tiles[checkX, checkY];
+                                if (checkTile.Type == TileType.DirtRoad)
+                                {
+                                    tile = checkTile;
+                                    actualRoadX = checkX;
+                                    actualRoadY = checkY;
+                                    foundRoad = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Hide dirt roads only at 400ft+ zoom (only show important infrastructure at far zoom)
+            if (tile.Type == TileType.DirtRoad && gameState.ZoomLevel <= -2)
+            {
+                // Try to show an adjacent non-road tile instead
+                Tile? replacementTile = null;
+
+                // Check adjacent tiles in order: right, down, left, up
+                if (worldX + 1 < gameState.MapWidth && gameState.Tiles[worldX + 1, worldY].Type != TileType.DirtRoad)
+                    replacementTile = gameState.Tiles[worldX + 1, worldY];
+                else if (worldY + 1 < gameState.MapHeight && gameState.Tiles[worldX, worldY + 1].Type != TileType.DirtRoad)
+                    replacementTile = gameState.Tiles[worldX, worldY + 1];
+                else if (worldX - 1 >= 0 && gameState.Tiles[worldX - 1, worldY].Type != TileType.DirtRoad)
+                    replacementTile = gameState.Tiles[worldX - 1, worldY];
+                else if (worldY - 1 >= 0 && gameState.Tiles[worldX, worldY - 1].Type != TileType.DirtRoad)
+                    replacementTile = gameState.Tiles[worldX, worldY - 1];
+
+                // If still no replacement, search diagonals and further out
+                if (replacementTile == null)
+                {
+                    // Check diagonals
+                    if (worldX + 1 < gameState.MapWidth && worldY + 1 < gameState.MapHeight &&
+                        gameState.Tiles[worldX + 1, worldY + 1].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX + 1, worldY + 1];
+                    else if (worldX + 1 < gameState.MapWidth && worldY - 1 >= 0 &&
+                        gameState.Tiles[worldX + 1, worldY - 1].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX + 1, worldY - 1];
+                    else if (worldX - 1 >= 0 && worldY + 1 < gameState.MapHeight &&
+                        gameState.Tiles[worldX - 1, worldY + 1].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX - 1, worldY + 1];
+                    else if (worldX - 1 >= 0 && worldY - 1 >= 0 &&
+                        gameState.Tiles[worldX - 1, worldY - 1].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX - 1, worldY - 1];
+                    // Check 2 tiles away
+                    else if (worldX + 2 < gameState.MapWidth && gameState.Tiles[worldX + 2, worldY].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX + 2, worldY];
+                    else if (worldY + 2 < gameState.MapHeight && gameState.Tiles[worldX, worldY + 2].Type != TileType.DirtRoad)
+                        replacementTile = gameState.Tiles[worldX, worldY + 2];
+                }
+
+                // If we found a non-road tile, use it; otherwise default to farm appearance
+                if (replacementTile != null)
+                {
+                    tile = replacementTile;
+                }
+                else
+                {
+                    // Can't find non-road nearby (rare) - render as farm to blend in
+                    mainConsole.Print(screenX, screenY, "▒", Color.Yellow, Color.DarkGoldenrod);
+                    continue;
+                }
+            }
+
+            var (glyph, foreground, background) = GetTileAppearance(tile);
+
+            // Check for intersections and direction on roads
+            if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+            {
+                // Check neighbors at the actual road position (may differ from sampled position)
+                bool hasNorth = actualRoadY > 0 && IsRoadTile(gameState.Tiles[actualRoadX, actualRoadY - 1].Type);
+                bool hasSouth = actualRoadY < gameState.MapHeight - 1 && IsRoadTile(gameState.Tiles[actualRoadX, actualRoadY + 1].Type);
+                bool hasWest = actualRoadX > 0 && IsRoadTile(gameState.Tiles[actualRoadX - 1, actualRoadY].Type);
+                bool hasEast = actualRoadX < gameState.MapWidth - 1 && IsRoadTile(gameState.Tiles[actualRoadX + 1, actualRoadY].Type);
+
+                bool isIntersection = (hasNorth || hasSouth) && (hasWest || hasEast);
+
+                if (isIntersection)
+                {
+                    glyph = RoadRenderer.GetIntersectionChar(gameState.ZoomLevel);
+                }
+                else
+                {
+                    // Determine if this is a vertical or horizontal road
+                    bool isVertical = (hasNorth || hasSouth) && !(hasWest || hasEast);
+                    (glyph, foreground, background) = RoadRenderer.GetRoadAppearance(tile.Type, gameState.ZoomLevel, isVertical);
+                }
+            }
+
+            mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
+        }
+    }
+}
+
 (char glyph, Color foreground, Color background) GetTileAppearance(Tile tile)
 {
+    if (tile.Type == TileType.Farm && tile.CropType != null && gameState != null)
+    {
+        return GetFarmAppearance(tile.CropType, gameState.GetCurrentSeason());
+    }
+
     return tile.Type switch
     {
         TileType.Grass => ('.', Color.Green, Color.DarkGreen),
-        TileType.Road => ('#', Color.Gray, Color.DarkGray),
+        TileType.DirtRoad => RoadRenderer.GetRoadAppearance(tile.Type, gameState?.ZoomLevel ?? 0),
+        TileType.PavedRoad => RoadRenderer.GetRoadAppearance(tile.Type, gameState?.ZoomLevel ?? 0),
+        TileType.Farm => ((char)240, Color.SaddleBrown, Color.DarkKhaki), // Fallback if no crop type
+        TileType.Trees => ('♠', Color.DarkGreen, Color.Green),
         TileType.Building => tile.Building != null
             ? (tile.Building.DisplayChar, tile.Building.Color, Color.Black)
             : ('B', Color.White, Color.Black),
@@ -388,9 +922,52 @@ void Render()
     };
 }
 
+(char glyph, Color foreground, Color background) GetFarmAppearance(string cropType, Season season)
+{
+    // Hardcoded crop appearances for now (can load from files later)
+    if (cropType == "fallow_plowed")
+    {
+        return season switch
+        {
+            Season.Spring => ((char)240, Color.SaddleBrown, Color.Peru),
+            Season.Summer => ((char)240, Color.Brown, Color.Tan),
+            Season.Fall => ((char)240, Color.DarkGoldenrod, Color.Peru),
+            Season.Winter => ((char)240, Color.DarkSlateGray, Color.SlateGray),
+            _ => ((char)240, Color.SaddleBrown, Color.Peru)
+        };
+    }
+    else if (cropType == "fallow_unplowed")
+    {
+        return season switch
+        {
+            Season.Spring => ('.', Color.YellowGreen, Color.DarkOliveGreen),
+            Season.Summer => ('.', Color.GreenYellow, Color.Olive),
+            Season.Fall => ('.', Color.DarkKhaki, Color.DarkGoldenrod),
+            Season.Winter => ('.', Color.Tan, Color.SaddleBrown),
+            _ => ('.', Color.YellowGreen, Color.DarkOliveGreen)
+        };
+    }
+
+    // Fallback
+    return ((char)240, Color.SaddleBrown, Color.DarkKhaki);
+}
+
+// Road appearance logic moved to RoadRenderer class for testability
+
 void RenderUI(ScreenSurface console, int uiStartY)
 {
     if (gameState == null) return;
+
+    // Date and speed display (top right corner)
+    var speedText = gameState.GameSpeed == 0 ? "PAUSED" : $"Speed: {gameState.GameSpeed}";
+    var dateText = $"{gameState.GetFormattedDate()} | {speedText}";
+    int dateX = console.Width - dateText.Length - 1;
+    console.Print(dateX, 0, dateText, gameState.GameSpeed == 0 ? Color.Yellow : Color.LightGreen, Color.Black);
+
+    // Zoom level display (second line top right)
+    var zoomText = $"Zoom: {gameState.GetZoomLevelName()} | 1 tile = {gameState.GetTileScale()}ft";
+    int zoomX = console.Width - zoomText.Length - 1;
+    console.Print(zoomX, 1, zoomText, Color.Cyan, Color.Black);
 
     // Draw separator
     console.DrawLine(new Point(0, uiStartY), new Point(console.Width - 1, uiStartY), '─', Color.Gray);
@@ -431,5 +1008,21 @@ class InputHandler : SadConsole.Components.UpdateComponent
         {
             _onKeyPressed(console, keyboard);
         }
+    }
+}
+
+// Update handler component for game loop
+class UpdateComponent : SadConsole.Components.UpdateComponent
+{
+    private readonly Action<IScreenObject, TimeSpan> _onUpdate;
+
+    public UpdateComponent(Action<IScreenObject, TimeSpan> onUpdate)
+    {
+        _onUpdate = onUpdate;
+    }
+
+    public override void Update(IScreenObject console, TimeSpan delta)
+    {
+        _onUpdate(console, delta);
     }
 }

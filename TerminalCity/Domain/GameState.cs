@@ -16,16 +16,124 @@ public class GameState
     public Point CameraPosition { get; set; }
     public Dialog? CurrentDialog { get; set; } = null; // Modal dialog overlay
 
+    // Zoom/Scale system
+    public int ZoomLevel { get; set; } = 0; // 0 = default, negative = zoomed out, positive = zoomed in
+
+    /// <summary>
+    /// Get the real-world size (in feet) that one tile represents at current zoom
+    /// </summary>
+    public int GetTileScale()
+    {
+        return ZoomLevel switch
+        {
+            -2 => 400,  // Very zoomed out
+            -1 => 200,  // Zoomed out
+            0 => 100,   // Default
+            1 => 50,    // Zoomed in
+            2 => 25,    // Very zoomed in
+            _ => 100
+        };
+    }
+
+    /// <summary>
+    /// Get zoom level name for display
+    /// </summary>
+    public string GetZoomLevelName()
+    {
+        return ZoomLevel switch
+        {
+            -2 => "Very Far",
+            -1 => "Far",
+            0 => "Normal",
+            1 => "Close",
+            2 => "Very Close",
+            _ => "Normal"
+        };
+    }
+
+    /// <summary>
+    /// Get the render scale multiplier for current zoom
+    /// </summary>
+    public double GetRenderScale()
+    {
+        return ZoomLevel switch
+        {
+            -2 => 0.25,  // Show every 4th tile
+            -1 => 0.5,   // Show every 2nd tile
+            0 => 1.0,    // Normal 1:1
+            1 => 2.0,    // Each tile becomes 2x2
+            2 => 4.0,    // Each tile becomes 4x4
+            _ => 1.0
+        };
+    }
+
     // City data
     public Tile[,] Tiles { get; }
     public List<Building> Buildings { get; set; } = new();
+    public List<Plot> Plots { get; set; } = new();
 
     // Resources
     public int Money { get; set; } = 10000;
     public int Population { get; set; } = 0;
 
-    // Time
-    public DateTime CurrentDate { get; set; } = new DateTime(2050, 1, 1);
+    // Time and Speed
+    public DateTime CurrentDate { get; set; } = new DateTime(2050, 1, 1, 1, 0, 0); // Start at 1 AM
+    public int GameSpeed { get; set; } = 0; // 0 = paused, 1-4 = speed levels
+    private int _tickCounter = 0;
+
+    /// <summary>
+    /// Advance time based on current game speed
+    /// </summary>
+    public void AdvanceTime()
+    {
+        if (GameSpeed == 0) return; // Paused
+
+        _tickCounter++;
+
+        // Determine time advancement based on speed
+        // Speed 1: 3 ticks per day (8 hours per tick)
+        // Speed 2: 1 tick per day (24 hours per tick)
+        // Speed 3: 3 days per tick
+        // Speed 4: 7 days per tick
+        var advancement = GameSpeed switch
+        {
+            1 => (_tickCounter >= 3, 0, 8, 0),   // Every 3 ticks, advance 8 hours
+            2 => (_tickCounter >= 1, 1, 0, 0),   // Every tick, advance 1 day
+            3 => (_tickCounter >= 1, 3, 0, 0),   // Every tick, advance 3 days
+            4 => (_tickCounter >= 1, 7, 0, 0),   // Every tick, advance 7 days
+            _ => (false, 0, 0, 0)
+        };
+
+        if (advancement.Item1) // Should advance
+        {
+            CurrentDate = CurrentDate.AddDays(advancement.Item2).AddHours(advancement.Item3);
+            _tickCounter = 0;
+        }
+    }
+
+    /// <summary>
+    /// Get formatted date and time string for display
+    /// </summary>
+    public string GetFormattedDate()
+    {
+        return CurrentDate.ToString("MMM d, yyyy h:mm tt");
+    }
+
+    /// <summary>
+    /// Get current season based on date (Northern Hemisphere)
+    /// </summary>
+    public Season GetCurrentSeason()
+    {
+        int month = CurrentDate.Month;
+        return month switch
+        {
+            3 or 4 or 5 => Season.Spring,
+            6 or 7 or 8 => Season.Summer,
+            9 or 10 or 11 => Season.Fall,
+            12 or 1 or 2 => Season.Winter,
+            _ => Season.Spring
+        };
+    }
 
     public GameState(int mapWidth = 200, int mapHeight = 200)
     {
@@ -102,6 +210,14 @@ public class GameState
         Money -= building.Cost;
         return true;
     }
+}
+
+public enum Season
+{
+    Spring,
+    Summer,
+    Fall,
+    Winter
 }
 
 public enum GameMode

@@ -1,0 +1,68 @@
+# Agriculture Buildings
+# Farm buildings for rural and suburban development
+
+[building]
+id: family_farm
+name: Family Farm
+type: Industrial
+description: A small traditional family farm with fields for crops or pasture for livestock. The backbone of rural America.
+width: 3
+height: 3
+cost: 500
+maintenance: 5
+display_char: ▒
+color: Yellow
+unlocked_by_default: true
+era_available: 1700
+era_obsolete: 9999
+
+[building]
+id: grain_silo
+name: Grain Silo
+type: Industrial
+description: Tall cylindrical structure for storing grain. Essential for farms producing wheat, corn, or other grains.
+width: 1
+height: 2
+cost: 200
+maintenance: 2
+display_char: ║
+display_char_code: 186
+color: Silver
+background_color: SaddleBrown
+unlocked_by_default: true
+era_available: 1880
+era_obsolete: 9999
+
+[building]
+id: barn
+name: Barn
+type: Industrial
+description: Traditional red barn for housing livestock, storing equipment, and keeping hay. An iconic symbol of American farming.
+width: 2
+height: 2
+cost: 300
+maintenance: 3
+display_char: ⌂
+display_char_code: 127
+color: Red
+background_color: Peru
+unlocked_by_default: true
+era_available: 1700
+era_obsolete: 9999
+
+[building]
+id: farmhouse
+name: Farmhouse
+type: Residential
+description: The farmer's home, typically a simple but sturdy house near the fields. Often multi-generational.
+width: 2
+height: 2
+cost: 400
+maintenance: 4
+display_char: ⌂
+display_char_code: 127
+color: White
+background_color: DarkKhaki
+unlocked_by_default: true
+era_available: 1700
+era_obsolete: 9999
