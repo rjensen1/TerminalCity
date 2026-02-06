@@ -1,0 +1,76 @@
+# Farm Outbuildings and Structures
+# Individual structures that can be placed in farmstead plots
+
+[structure]
+id: shed
+name: Shed
+type: storage
+size: 1x1
+description: Small storage shed for tools and equipment
+display_char: ■
+display_char_code: 254
+color: Brown
+background_color: SaddleBrown
+can_attach_to: house, barn
+
+[structure]
+id: chicken_coop
+name: Chicken Coop
+type: livestock
+size: 1x1
+description: Small coop for chickens and eggs
+display_char: ▪
+display_char_code: 254
+color: Red
+background_color: DarkRed
+can_attach_to: house, barn
+
+[structure]
+id: well
+name: Well
+type: utility
+size: 1x1
+description: Water well for household and livestock
+display_char: ○
+display_char_code: 9
+color: Gray
+background_color: DarkGray
+can_attach_to: house
+
+[structure]
+id: woodshed
+name: Woodshed
+type: storage
+size: 1x1
+description: Covered storage for firewood
+display_char: ▓
+display_char_code: 178
+color: SaddleBrown
+background_color: Peru
+can_attach_to: house
+
+[structure]
+id: outhouse
+name: Outhouse
+type: utility
+size: 1x1
+description: Outdoor privy (pre-indoor plumbing)
+display_char: ◙
+display_char_code: 10
+color: Gray
+background_color: DarkGray
+can_attach_to: house
+era_available: 1700
+era_obsolete: 1950
+
+[structure]
+id: smokehouse
+name: Smokehouse
+type: processing
+size: 1x1
+description: Small building for smoking and preserving meat
+display_char: ▒
+display_char_code: 177
+color: DarkGray
+background_color: Black
+can_attach_to: house

@@ -1,5 +1,6 @@
 using SadRogue.Primitives;
 using TerminalCity.Domain;
+using TerminalCity.Parsers;
 
 namespace TerminalCity.Generation;
 
@@ -37,6 +38,12 @@ public static class MapGenerator
         {
             PlaceFarms(gameState, scenario, random);
         }
+
+        // Step 3.5: Add field boundaries between plots
+        AddFieldBoundaries(gameState, random);
+
+        // Step 3.6: Add farmsteads (house/barn clusters) to some plots
+        AddFarmsteads(gameState, random);
 
         // Step 4: Add trees/vegetation
         if (scenario.InitialTreesPercent > 0)
@@ -305,6 +312,182 @@ public static class MapGenerator
                         string cropType = random.NextDouble() < 0.7 ? "fallow_plowed" : "fallow_unplowed";
                         gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, cropType);
                     }
+                }
+            }
+        }
+    }
+
+    private static void AddFieldBoundaries(GameState gameState, Random random)
+    {
+        foreach (var plot in gameState.Plots)
+        {
+            if (plot.Type != PlotType.Farmland) continue;
+
+            // Check for adjacent plots and add boundaries (50% chance for each edge)
+
+            // North boundary (top edge of plot)
+            if (HasAdjacentPlot(gameState, plot, 0, -1) && random.NextDouble() > 0.5)
+            {
+                AddBoundary(gameState, plot, "north", random);
+            }
+
+            // East boundary (right edge of plot)
+            if (HasAdjacentPlot(gameState, plot, 1, 0) && random.NextDouble() > 0.5)
+            {
+                AddBoundary(gameState, plot, "east", random);
+            }
+        }
+    }
+
+    private static bool HasAdjacentPlot(GameState gameState, Plot plot, int dx, int dy)
+    {
+        // Check if there's another plot adjacent in the given direction
+        int checkX = plot.Bounds.X + (dx > 0 ? plot.Bounds.Width : dx);
+        int checkY = plot.Bounds.Y + (dy > 0 ? plot.Bounds.Height : dy);
+
+        // Out of bounds
+        if (checkX < 0 || checkX >= gameState.MapWidth || checkY < 0 || checkY >= gameState.MapHeight)
+            return false;
+
+        // Check if it's a road (plots don't extend into roads)
+        var tile = gameState.Tiles[checkX, checkY];
+        if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+            return false;
+
+        // Check if there's another plot there
+        var adjacentPlot = gameState.Plots.FirstOrDefault(p => p.Contains(checkX, checkY) && p != plot);
+        return adjacentPlot != null;
+    }
+
+    private static void AddBoundary(GameState gameState, Plot plot, string edge, Random random)
+    {
+        // Choose a random boundary type and store edge direction
+        int typeChoice = random.Next(5);
+        string boundaryType = typeChoice switch
+        {
+            0 => "tall_grass",
+            1 => "tree_line",
+            2 => "stone_wall",
+            3 => "fence",
+            _ => "hedgerow"
+        };
+
+        // Add edge direction to boundary type (e.g., "fence_north" or "fence_east")
+        string boundaryKey = $"{boundaryType}_{edge}";
+
+        if (edge == "north")
+        {
+            // Replace top row of plot
+            int y = plot.Bounds.Y;
+            for (int x = plot.Bounds.X; x < plot.Bounds.X + plot.Bounds.Width; x++)
+            {
+                if (x >= 0 && x < gameState.MapWidth && y >= 0 && y < gameState.MapHeight)
+                {
+                    gameState.Tiles[x, y] = new Tile(TileType.Trees, null, null, boundaryKey);
+                }
+            }
+        }
+        else if (edge == "east")
+        {
+            // Replace right column of plot
+            int x = plot.Bounds.X + plot.Bounds.Width - 1;
+            for (int y = plot.Bounds.Y; y < plot.Bounds.Y + plot.Bounds.Height; y++)
+            {
+                if (x >= 0 && x < gameState.MapWidth && y >= 0 && y < gameState.MapHeight)
+                {
+                    gameState.Tiles[x, y] = new Tile(TileType.Trees, null, null, boundaryKey);
+                }
+            }
+        }
+    }
+
+    private static void AddFarmsteads(GameState gameState, Random random)
+    {
+        // Load farmstead template (for now, just load the first one)
+        var farmsteadPath = Path.Combine("definitions", "plots", "farmsteads.txt");
+        var template = FarmsteadParser.LoadFromFile(farmsteadPath);
+
+        if (template == null) return;
+
+        // Find farm plots that have a road on their south edge
+        foreach (var plot in gameState.Plots)
+        {
+            if (plot.Type != PlotType.Farmland) continue;
+            if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height) continue;
+
+            // Check if there's a road immediately south of this plot
+            int southY = plot.Bounds.Y + plot.Bounds.Height;
+            if (southY >= gameState.MapHeight) continue;
+
+            bool hasRoadSouth = false;
+            for (int x = plot.Bounds.X; x < plot.Bounds.X + plot.Bounds.Width; x++)
+            {
+                if (x < gameState.MapWidth)
+                {
+                    var tile = gameState.Tiles[x, southY];
+                    if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+                    {
+                        hasRoadSouth = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasRoadSouth) continue;
+
+            // Place farmstead at the south edge of the plot (near the road)
+            // Position it so the bottom of the farmstead is near the road
+            int farmsteadX = plot.Bounds.X + (plot.Bounds.Width - template.Width) / 2; // Center horizontally
+            int farmsteadY = plot.Bounds.Y + plot.Bounds.Height - template.Height; // Bottom of plot
+
+            PlaceFarmstead(gameState, template, farmsteadX, farmsteadY);
+
+            // For now, only place one farmstead total
+            return;
+        }
+    }
+
+    private static void PlaceFarmstead(GameState gameState, FarmsteadTemplate template, int startX, int startY)
+    {
+        for (int y = 0; y < template.Height; y++)
+        {
+            for (int x = 0; x < template.Width; x++)
+            {
+                int worldX = startX + x;
+                int worldY = startY + y;
+
+                if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
+                    continue;
+
+                var tileType = template.GetTileTypeAt(x, y);
+                if (tileType == null) continue;
+
+                // Map legend types to actual tile types
+                // For now, simple mapping - can be expanded later
+                switch (tileType.ToLower())
+                {
+                    case "yard":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null);
+                        break;
+                    case "farmhouse":
+                        // For now, just mark as grass - we'll add building rendering later
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "farmhouse");
+                        break;
+                    case "barn":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn");
+                        break;
+                    case "shed":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "shed");
+                        break;
+                    case "silo":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "silo");
+                        break;
+                    case "well":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "well");
+                        break;
+                    case "driveway":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "driveway");
+                        break;
                 }
             }
         }

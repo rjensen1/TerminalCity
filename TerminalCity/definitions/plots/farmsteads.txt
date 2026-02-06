@@ -1,0 +1,134 @@
+# Farmstead Plots - Visual Map Format
+# Uses legend system like roguelike room definitions
+
+[farmstead]
+id: tiny_farmhouse
+name: Tiny Farmhouse
+size: 3x3
+description: Minimal farmhouse with small yard. Street faces south (bottom).
+map:
+...
+HHS
+HH.
+
+legend:
+. = yard
+H = farmhouse
+S = shed
+
+[farmstead]
+id: small_farm_with_barn
+name: Small Farm with Barn
+size: 5x4
+description: Farmhouse with barn and driveway
+map:
+.....
+HH.BB
+HH.BB
+..D..
+
+legend:
+. = yard
+H = farmhouse
+B = barn
+S = shed
+D = driveway
+
+[farmstead]
+id: medium_farmstead
+name: Medium Farmstead
+size: 6x5
+description: Farmhouse with barn, silo, and outbuildings
+map:
+......
+HHW.BS
+HH..BS
+..DII.
+....S.
+
+legend:
+. = yard
+H = farmhouse
+B = barn
+I = silo
+S = shed
+W = well
+D = driveway
+
+[plot_template]
+id: medium_farmstead
+name: Medium Farmstead
+type: farmstead
+min_size: 3x3
+max_size: 6x6
+description: Mid-sized farm with house and barn. Typical family farm.
+street_side: south
+
+[structure]
+type: farmhouse
+position: 0,1
+size: 2x2
+required: true
+
+[structure]
+type: barn
+position: 3,2             # Set back further, to the side
+size: 2x2
+required: false           # Not all farms have barns visible in curtilage
+
+[area]
+type: yard
+position: 0,0
+size: 3x1
+fill: grass
+
+[area]
+type: driveway
+position: 2,0
+size: 1x3                 # Runs from street to barn
+fill: dirt
+
+[plot_template]
+id: large_farmstead
+name: Large Farmstead
+type: farmstead
+min_size: 5x5
+max_size: 8x8
+description: Prosperous farm with house, barn, and silo. Well-established operation.
+street_side: south
+
+[structure]
+type: farmhouse
+position: 0,2
+size: 2x2
+required: true
+
+[structure]
+type: barn
+position: 4,3
+size: 2x2
+required: true
+
+[structure]
+type: silo
+position: 6,3
+size: 1x2
+required: false
+
+[area]
+type: yard
+position: 0,0
+size: 4x2                 # Large front yard
+fill: grass
+
+[area]
+type: driveway
+position: 3,0
+size: 2x5                 # Wide driveway to barn
+fill: dirt
+
+[area]
+type: tree_cluster
+position: 1,4
+size: 2x2
+fill: trees

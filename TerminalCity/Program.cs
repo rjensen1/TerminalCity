@@ -586,6 +586,13 @@ void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
             {
                 RenderRoadZoomedIn(dataX, dataY, scale, worldX, worldY, viewportWidth, viewportHeight, tile.Type);
             }
+            // Field boundaries need edge rendering at scale > 1
+            else if (tile.Type == TileType.Trees && tile.CropType != null &&
+                     (tile.CropType.EndsWith("_north") || tile.CropType.EndsWith("_east")) &&
+                     scale > 1)
+            {
+                RenderBoundaryZoomedIn(dataX, dataY, scale, worldX, worldY, viewportWidth, viewportHeight, tile.CropType);
+            }
             else
             {
                 // All tiles (including roads at scale=1) fill the scaled area with their glyph
@@ -621,6 +628,61 @@ void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
                         if (screenX < viewportWidth && screenY < viewportHeight)
                             mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
                     }
+                }
+            }
+        }
+    }
+}
+
+void RenderBoundaryZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY, int viewportWidth, int viewportHeight, string boundaryType)
+{
+    if (gameState == null || mainConsole == null) return;
+
+    // Determine if this is north or east boundary
+    bool isNorth = boundaryType.EndsWith("_north");
+    bool isEast = boundaryType.EndsWith("_east");
+
+    // Get the boundary appearance
+    var (boundaryGlyph, boundaryFg, boundaryBg) = GetBoundaryAppearance(boundaryType);
+
+    // Find the plot this tile belongs to and get its crop type
+    var plot = gameState.Plots.FirstOrDefault(p => p.Contains(worldX, worldY));
+    var cropType = plot?.CropType ?? "fallow_plowed";
+
+    // Get the crop appearance (what should fill the non-boundary area)
+    var (cropGlyph, cropFg, cropBg) = GetFarmAppearance(cropType, gameState.GetCurrentSeason());
+
+    // Render the scaled block
+    for (int sy = 0; sy < scale; sy++)
+    {
+        for (int sx = 0; sx < scale; sx++)
+        {
+            int screenX = dataX * scale + sx;
+            int screenY = dataY * scale + sy;
+
+            if (screenX < viewportWidth && screenY < viewportHeight)
+            {
+                // Determine if this screen position should show boundary or crop
+                bool showBoundary = false;
+
+                if (isNorth && sy == 0)
+                {
+                    // North boundary: top row only
+                    showBoundary = true;
+                }
+                else if (isEast && sx == scale - 1)
+                {
+                    // East boundary: rightmost column only
+                    showBoundary = true;
+                }
+
+                if (showBoundary)
+                {
+                    mainConsole.Print(screenX, screenY, boundaryGlyph.ToString(), boundaryFg, boundaryBg);
+                }
+                else
+                {
+                    mainConsole.Print(screenX, screenY, cropGlyph.ToString(), cropFg, cropBg);
                 }
             }
         }
@@ -900,6 +962,18 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
         return GetFarmAppearance(tile.CropType, gameState.GetCurrentSeason());
     }
 
+    // Handle field boundaries (stored as Trees type with special crop type)
+    if (tile.Type == TileType.Trees && tile.CropType != null)
+    {
+        return GetBoundaryAppearance(tile.CropType);
+    }
+
+    // Handle farmstead structures (stored as Grass type with structure name in CropType)
+    if (tile.Type == TileType.Grass && tile.CropType != null)
+    {
+        return GetFarmsteadStructureAppearance(tile.CropType);
+    }
+
     return tile.Type switch
     {
         TileType.Grass => ('.', Color.Green, Color.DarkGreen),
@@ -950,6 +1024,61 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
 
     // Fallback
     return ((char)240, Color.SaddleBrown, Color.DarkKhaki);
+}
+
+(char glyph, Color foreground, Color background) GetBoundaryAppearance(string boundaryType)
+{
+    return boundaryType switch
+    {
+        // Tall grass (same for both)
+        "tall_grass_north" => ('.', Color.YellowGreen, Color.DarkOliveGreen),
+        "tall_grass_east" => ('.', Color.YellowGreen, Color.DarkOliveGreen),
+
+        // Tree line (same for both)
+        "tree_line_north" => ('♠', Color.DarkGreen, Color.Green),
+        "tree_line_east" => ('♠', Color.DarkGreen, Color.Green),
+
+        // Stone wall (horizontal vs vertical appearance)
+        "stone_wall_north" => ((char)205, Color.Gray, Color.DarkGray), // ═ horizontal double line
+        "stone_wall_east" => ((char)186, Color.Gray, Color.DarkGray),  // ║ vertical double line
+
+        // Fence (different for north vs east)
+        "fence_north" => ((char)209, Color.SaddleBrown, Color.Peru),   // ╤ horizontal fence
+        "fence_east" => ('|', Color.SaddleBrown, Color.Peru),          // | vertical fence
+
+        // Hedgerow (horizontal vs vertical density)
+        "hedgerow_north" => ((char)196, Color.DarkGreen, Color.Olive), // ─ horizontal line
+        "hedgerow_east" => ((char)179, Color.DarkGreen, Color.Olive),  // │ vertical line
+
+        _ => ('.', Color.YellowGreen, Color.DarkOliveGreen)
+    };
+}
+
+(char glyph, Color foreground, Color background) GetFarmsteadStructureAppearance(string structureType)
+{
+    return structureType switch
+    {
+        // Main buildings from agriculture.txt
+        "farmhouse" => ((char)127, Color.White, Color.DarkKhaki),      // ⌂ white house
+        "barn" => ((char)127, Color.Red, Color.Peru),                  // ⌂ red barn
+        "silo" => ((char)186, Color.Silver, Color.SaddleBrown),        // ║ silver silo
+
+        // Outbuildings from structures.txt
+        "shed" => ((char)254, Color.Brown, Color.SaddleBrown),         // ■ brown shed
+        "well" => ((char)9, Color.Gray, Color.DarkGray),               // ○ gray well
+        "chicken_coop" => ((char)254, Color.Red, Color.DarkRed),       // ▪ red coop
+        "woodshed" => ((char)178, Color.SaddleBrown, Color.Peru),      // ▓ woodshed
+        "outhouse" => ((char)10, Color.Gray, Color.DarkGray),          // ◙ outhouse
+        "smokehouse" => ((char)177, Color.DarkGray, Color.Black),      // ▒ smokehouse
+
+        // Yard is just grass
+        "yard" => ('.', Color.Green, Color.DarkGreen),
+
+        // Driveway is dirt/gravel
+        "driveway" => ((char)176, Color.Tan, Color.SaddleBrown),       // ░ light shade
+
+        _ => ('.', Color.Green, Color.DarkGreen) // Default to grass
+    };
 }
 
 // Road appearance logic moved to RoadRenderer class for testability
