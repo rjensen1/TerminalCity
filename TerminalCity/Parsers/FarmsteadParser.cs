@@ -35,7 +35,12 @@ public static class FarmsteadParser
                 {
                     // Save previous template if exists
                     if (template != null)
+                    {
+                        // Set the map and legend before returning
+                        template.MapRows = mapLines;
+                        template.Legend = legend;
                         return template; // Return first one for now
+                    }
 
                     template = new FarmsteadTemplate();
                     mapLines.Clear();

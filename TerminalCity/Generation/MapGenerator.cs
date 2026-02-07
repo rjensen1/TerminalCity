@@ -45,6 +45,16 @@ public static class MapGenerator
         // Step 3.6: Add farmsteads (house/barn clusters) to some plots
         AddFarmsteads(gameState, random);
 
+        // TEST: Place a visible farmstead at map center for debugging
+        int centerX = gameState.MapWidth / 2;
+        int centerY = gameState.MapHeight / 2;
+        gameState.Tiles[centerX + 2, centerY + 2] = new Tile(TileType.Grass, null, null, "farmhouse");
+        gameState.Tiles[centerX + 3, centerY + 2] = new Tile(TileType.Grass, null, null, "farmhouse");
+        gameState.Tiles[centerX + 4, centerY + 2] = new Tile(TileType.Grass, null, null, "barn");
+        gameState.Tiles[centerX + 5, centerY + 2] = new Tile(TileType.Grass, null, null, "barn");
+        gameState.Tiles[centerX + 6, centerY + 2] = new Tile(TileType.Grass, null, null, "shed");
+        Console.WriteLine($"DEBUG TEST: Placed test farmstead at center+2 ({centerX + 2}, {centerY + 2})");
+
         // Step 4: Add trees/vegetation
         if (scenario.InitialTreesPercent > 0)
         {
@@ -407,13 +417,27 @@ public static class MapGenerator
         var farmsteadPath = Path.Combine("definitions", "plots", "farmsteads.txt");
         var template = FarmsteadParser.LoadFromFile(farmsteadPath);
 
-        if (template == null) return;
+        if (template == null)
+        {
+            Console.WriteLine("DEBUG: Failed to load farmstead template");
+            return;
+        }
+
+        Console.WriteLine($"DEBUG: Loaded farmstead template: {template.Name} ({template.Width}x{template.Height})");
+        Console.WriteLine($"DEBUG: Checking {gameState.Plots.Count} plots for farmstead placement");
 
         // Find farm plots that have a road on their south edge
+        int checkedPlots = 0;
         foreach (var plot in gameState.Plots)
         {
             if (plot.Type != PlotType.Farmland) continue;
-            if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height) continue;
+            checkedPlots++;
+
+            if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height)
+            {
+                Console.WriteLine($"DEBUG: Plot at ({plot.Bounds.X},{plot.Bounds.Y}) too small: {plot.Bounds.Width}x{plot.Bounds.Height}");
+                continue;
+            }
 
             // Check if there's a road immediately south of this plot
             int southY = plot.Bounds.Y + plot.Bounds.Height;
@@ -433,22 +457,33 @@ public static class MapGenerator
                 }
             }
 
-            if (!hasRoadSouth) continue;
+            if (!hasRoadSouth)
+            {
+                Console.WriteLine($"DEBUG: Plot at ({plot.Bounds.X},{plot.Bounds.Y}) has no road on south");
+                continue;
+            }
 
             // Place farmstead at the south edge of the plot (near the road)
             // Position it so the bottom of the farmstead is near the road
             int farmsteadX = plot.Bounds.X + (plot.Bounds.Width - template.Width) / 2; // Center horizontally
             int farmsteadY = plot.Bounds.Y + plot.Bounds.Height - template.Height; // Bottom of plot
 
+            Console.WriteLine($"DEBUG: Placing farmstead at ({farmsteadX},{farmsteadY}) in plot ({plot.Bounds.X},{plot.Bounds.Y})");
             PlaceFarmstead(gameState, template, farmsteadX, farmsteadY);
 
             // For now, only place one farmstead total
             return;
         }
+
+        Console.WriteLine($"DEBUG: Checked {checkedPlots} farmland plots, found none suitable for farmstead");
     }
 
     private static void PlaceFarmstead(GameState gameState, FarmsteadTemplate template, int startX, int startY)
     {
+        Console.WriteLine($"DEBUG: PlaceFarmstead called at ({startX},{startY}) with template {template.Width}x{template.Height}");
+        Console.WriteLine($"DEBUG: Template has {template.MapRows.Count} map rows");
+
+        int tilesPlaced = 0;
         for (int y = 0; y < template.Height; y++)
         {
             for (int x = 0; x < template.Width; x++)
@@ -462,35 +497,45 @@ public static class MapGenerator
                 var tileType = template.GetTileTypeAt(x, y);
                 if (tileType == null) continue;
 
+                var oldTile = gameState.Tiles[worldX, worldY];
+                Console.WriteLine($"DEBUG: Placing {tileType} at ({worldX},{worldY}), replacing {oldTile.Type}/{oldTile.CropType}");
+
                 // Map legend types to actual tile types
-                // For now, simple mapping - can be expanded later
+                // All farmstead tiles are marked with their type in CropType for rendering
                 switch (tileType.ToLower())
                 {
                     case "yard":
-                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null);
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "yard");
+                        tilesPlaced++;
                         break;
                     case "farmhouse":
-                        // For now, just mark as grass - we'll add building rendering later
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "farmhouse");
+                        tilesPlaced++;
                         break;
                     case "barn":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn");
+                        tilesPlaced++;
                         break;
                     case "shed":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "shed");
+                        tilesPlaced++;
                         break;
                     case "silo":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "silo");
+                        tilesPlaced++;
                         break;
                     case "well":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "well");
+                        tilesPlaced++;
                         break;
                     case "driveway":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "driveway");
+                        tilesPlaced++;
                         break;
                 }
             }
         }
+        Console.WriteLine($"DEBUG: PlaceFarmstead completed, placed {tilesPlaced} tiles");
     }
 
     private static void PlaceTrees(GameState gameState, Scenario scenario, Random random)
@@ -528,8 +573,10 @@ public static class MapGenerator
 
                 var treeTile = gameState.Tiles[treeX, treeY];
 
-                // Only place on grass or farm
-                if (treeTile.Type == TileType.Grass || treeTile.Type == TileType.Farm)
+                // Only place on grass or farm, but NOT on farmstead structures (which are Grass with CropType)
+                bool isFarmsteadStructure = treeTile.Type == TileType.Grass && treeTile.CropType != null;
+
+                if (!isFarmsteadStructure && (treeTile.Type == TileType.Grass || treeTile.Type == TileType.Farm))
                 {
                     gameState.Tiles[treeX, treeY] = new Tile(TileType.Trees, null);
                     placedTrees++;

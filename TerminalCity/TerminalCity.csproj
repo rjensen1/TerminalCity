@@ -13,4 +13,10 @@
     <PackageReference Include="SadConsole.Host.MonoGame" Version="10.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="definitions\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

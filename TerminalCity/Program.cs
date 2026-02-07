@@ -777,6 +777,25 @@ bool IsRoadTile(TileType type)
     return type == TileType.DirtRoad || type == TileType.PavedRoad;
 }
 
+int GetStructurePriority(string? cropType)
+{
+    // Determines which structures are important to show at far zoom
+    // Higher number = more important
+    // TODO: In the future, make this definable in the structure definition files
+    // (e.g., add a "zoom_priority" or "importance" field to agriculture.txt and structures.txt)
+    return cropType switch
+    {
+        "farmhouse" => 5,  // Most important - always show
+        "barn" => 4,       // Important - always show
+        "shed" => 3,       // Less important - show if no farmhouse/barn
+        "well" => 0,       // Not visible at far zoom
+        "silo" => 0,       // Not visible at far zoom (per user requirement)
+        "driveway" => 0,   // Not visible at far zoom
+        "yard" => 0,       // Not visible at far zoom
+        _ => 0
+    };
+}
+
 void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
 {
     if (gameState == null || mainConsole == null) return;
@@ -870,6 +889,47 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                             }
                         }
                     }
+                }
+            }
+
+            // At far zoom (200ft and 400ft), ensure important farmstead structures are always visible
+            if (gameState.ZoomLevel <= -1)
+            {
+                // Search the sampling area for important structures
+                Tile? importantStructure = null;
+                int structurePriority = 0; // Higher = more important
+
+                for (int dy = 0; dy < skipFactor; dy++)
+                {
+                    for (int dx = 0; dx < skipFactor; dx++)
+                    {
+                        int checkX = worldX + dx;
+                        int checkY = worldY + dy;
+
+                        if (checkX < gameState.MapWidth && checkY < gameState.MapHeight)
+                        {
+                            var checkTile = gameState.Tiles[checkX, checkY];
+
+                            // Check if this is a farmstead structure (Grass with CropType)
+                            if (checkTile.Type == TileType.Grass && checkTile.CropType != null)
+                            {
+                                int priority = GetStructurePriority(checkTile.CropType);
+
+                                // Keep the most important structure found
+                                if (priority > structurePriority)
+                                {
+                                    importantStructure = checkTile;
+                                    structurePriority = priority;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // If we found an important structure, render it instead of the sampled tile
+                if (importantStructure != null)
+                {
+                    tile = importantStructure;
                 }
             }
 
@@ -1056,6 +1116,16 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
 
 (char glyph, Color foreground, Color background) GetFarmsteadStructureAppearance(string structureType)
 {
+    // TODO: Zoom-level building patterns
+    // At 25ft zoom (ZoomLevel = 2), multi-tile buildings should use pattern_25ft from building definitions
+    // Need to:
+    // 1. Load building definitions (parse agriculture.txt, structures.txt)
+    // 2. Track which position within a multi-tile building each tile is
+    // 3. Look up the character for that position from the pattern
+    // 4. Handle different zoom levels (100ft uses display_char, 25ft uses pattern_25ft)
+    //
+    // For now, using hardcoded single-character appearances
+
     return structureType switch
     {
         // Main buildings from agriculture.txt
