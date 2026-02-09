@@ -1,5 +1,10 @@
 # Agriculture Buildings
 # Farm buildings for rural and suburban development
+#
+# NOTE: This file is NOT currently parsed by the game.
+# Building appearances are hardcoded in Program.cs GetFarmsteadStructureAppearance()
+# The pattern_25ft fields are placeholders for future zoom-level detail system.
+# See ZOOM_BUILDING_DETAIL.md for implementation plan.
 
 [building]
 id: family_farm

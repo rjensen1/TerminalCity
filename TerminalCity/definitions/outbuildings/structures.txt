@@ -1,5 +1,9 @@
 # Farm Outbuildings and Structures
 # Individual structures that can be placed in farmstead plots
+#
+# NOTE: This file is NOT currently parsed by the game.
+# Structure appearances are hardcoded in Program.cs GetFarmsteadStructureAppearance()
+# Ready for future parser implementation.
 
 [structure]
 id: shed
