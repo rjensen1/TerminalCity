@@ -1,5 +1,12 @@
 # Farmstead Plots - Visual Map Format
 # Uses legend system like roguelike room definitions
+#
+# HOW TO USE:
+# - Defines the LAYOUT of farmstead curtilage plots (house, barn, yard, etc.)
+# - Uses visual ASCII maps where each character represents a tile type
+# - The legend maps characters to building/area types (H = farmhouse, . = yard)
+# - These are TEMPLATES that get placed within farm plots during map generation
+# - Plot file defines WHERE buildings go, building files define HOW they look
 
 [farmstead]
 id: tiny_farmhouse

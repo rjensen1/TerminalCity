@@ -1,5 +1,12 @@
 # Suburban Spillover - Bedroom Community Scenario
 # A realistic scenario based on post-WWII suburban expansion
+#
+# HOW TO USE:
+# - Defines the STARTING CONDITIONS for a new game
+# - Sets the year, starting money, initial population, map size
+# - Configures initial map generation (road layout, trees, terrain)
+# - Provides narrative context (description, backstory, goals)
+# - This file IS actively parsed by ScenarioParser and used at game start
 
 [scenario]
 id: bedroom_community_1955

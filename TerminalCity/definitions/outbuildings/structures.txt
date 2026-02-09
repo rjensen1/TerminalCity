@@ -1,5 +1,13 @@
 # Farm Outbuildings and Structures
-# Individual structures that can be placed in farmstead plots
+# Small accessory buildings for farms and homesteads
+#
+# HOW TO USE:
+# - Defines SMALL outbuildings (shed, well, chicken coop, outhouse, etc.)
+# - These are SECONDARY structures that support the main buildings
+# - Can be placed as STANDALONE buildings in any plot
+# - Can be included WITHIN farmstead plot templates (referenced in legend)
+# - Generally smaller than main buildings (1x1 or 1x2 tiles)
+# - Use 'can_attach_to' field to specify which buildings they complement
 #
 # NOTE: This file is NOT currently parsed by the game.
 # Structure appearances are hardcoded in Program.cs GetFarmsteadStructureAppearance()

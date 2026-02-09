@@ -1,6 +1,13 @@
 # Agriculture Buildings
 # Farm buildings for rural and suburban development
 #
+# HOW TO USE:
+# - Defines MAIN agricultural buildings (farmhouse, barn, silo, etc.)
+# - These are PRIMARY structures that define the farmstead
+# - Appearance at different zoom levels (display_char for 100ft, pattern_25ft for close zoom)
+# - Referenced by farmstead plot templates using their 'id'
+# - Can be placed as standalone buildings or as part of farmstead plots
+#
 # NOTE: This file is NOT currently parsed by the game.
 # Building appearances are hardcoded in Program.cs GetFarmsteadStructureAppearance()
 # The pattern_25ft fields are placeholders for future zoom-level detail system.
