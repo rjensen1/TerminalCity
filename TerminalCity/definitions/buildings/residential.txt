@@ -1,0 +1,39 @@
+# Residential Buildings
+# Buildings where people live - homes for families, individuals, etc.
+#
+# HOW TO USE:
+# - Defines buildings whose PRIMARY purpose is housing people
+# - Can appear in various contexts (farmsteads, suburbs, urban areas)
+# - A farmhouse is RESIDENTIAL even when part of an active farm
+# - When land use changes (farm → subdivision), these buildings can remain
+# - Supports organic city evolution without bulldozing everything
+#
+# NOTE: This file is NOT currently parsed by the game.
+# Building appearances are hardcoded in Program.cs GetFarmsteadStructureAppearance()
+# The pattern_25ft fields are placeholders for future zoom-level detail system.
+# See ZOOM_BUILDING_DETAIL.md for implementation plan.
+
+[building]
+id: farmhouse
+name: Farmhouse
+type: Residential
+description: The farmer's home, typically a simple but sturdy house near the fields. Often multi-generational. Can transition to regular residence when farm is sold.
+width: 2
+height: 2
+cost: 400
+maintenance: 4
+display_char: ⌂
+display_char_code: 127
+color: White
+background_color: DarkKhaki
+unlocked_by_default: true
+era_available: 1700
+era_obsolete: 9999
+
+# Zoom-level display patterns (TODO: implement parser and rendering)
+# At 100ft zoom (default) - uses display_char above
+# At 50ft zoom - still single char per tile
+# At 25ft zoom - 2x2 ASCII art pattern
+pattern_25ft:
+/‾\
+\__/

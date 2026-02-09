@@ -1,9 +1,11 @@
 # Agriculture Buildings
-# Farm buildings for rural and suburban development
+# Farm buildings for agricultural operations (barn, silo, etc.)
 #
 # HOW TO USE:
-# - Defines MAIN agricultural buildings (farmhouse, barn, silo, etc.)
-# - These are PRIMARY structures that define the farmstead
+# - Defines agricultural/industrial farm buildings (barn, silo, etc.)
+# - These buildings are tied to FARMING OPERATIONS
+# - Typically demolished or repurposed when farm is sold off
+# - Note: Farmhouse is in residential.txt (can persist after farm ends)
 # - Appearance at different zoom levels (display_char for 100ft, pattern_25ft for close zoom)
 # - Referenced by farmstead plot templates using their 'id'
 # - Can be placed as standalone buildings or as part of farmstead plots
@@ -67,28 +69,3 @@ era_obsolete: 9999
 pattern_25ft:
 /‾‾\
 |__|
-
-[building]
-id: farmhouse
-name: Farmhouse
-type: Residential
-description: The farmer's home, typically a simple but sturdy house near the fields. Often multi-generational.
-width: 2
-height: 2
-cost: 400
-maintenance: 4
-display_char: ⌂
-display_char_code: 127
-color: White
-background_color: DarkKhaki
-unlocked_by_default: true
-era_available: 1700
-era_obsolete: 9999
-
-# Zoom-level display patterns (TODO: implement parser and rendering)
-# At 100ft zoom (default) - uses display_char above
-# At 50ft zoom - still single char per tile
-# At 25ft zoom - 2x2 ASCII art pattern
-pattern_25ft:
-/‾\
-\__/
