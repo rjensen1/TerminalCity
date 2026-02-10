@@ -23,6 +23,7 @@ legend:
 H = farmhouse
 S = shed
 
+
 [farmstead]
 id: small_farm_with_barn
 name: Small Farm with Barn
@@ -40,6 +41,7 @@ H = farmhouse
 B = barn
 S = shed
 D = driveway
+
 
 [farmstead]
 id: medium_farmstead
