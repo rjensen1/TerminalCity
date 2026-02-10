@@ -14,26 +14,38 @@
 # See ZOOM_BUILDING_DETAIL.md for implementation plan.
 
 [building]
-id: farmhouse
-name: Farmhouse
+id: tiny_farmhouse
+name: Tiny Farmhouse
 type: Residential
-description: The farmer's home, typically a simple but sturdy house near the fields. Often multi-generational. Can transition to regular residence when farm is sold.
+description: Small 2x2 farmhouse. The farmer's home, simple and practical. Can transition to regular residence when farm is sold.
 width: 2
 height: 2
-cost: 400
-maintenance: 4
-display_char: ⌂
-display_char_code: 127
+cost: 300
+maintenance: 3
 color: White
 background_color: DarkKhaki
 unlocked_by_default: true
 era_available: 1700
 era_obsolete: 9999
 
-# Zoom-level display patterns (TODO: implement parser and rendering)
-# At 100ft zoom (default) - uses display_char above
-# At 50ft zoom - still single char per tile
-# At 25ft zoom - 2x2 ASCII art pattern
+# Zoom-level display patterns
+# 25ft zoom - always shows everything as-is (2x2 footprint)
 pattern_25ft:
-/‾\
-\__/
+⌂╗
+└╝
+
+# 50ft zoom - simplified but house is important
+pattern_50ft: ⌂
+important_50ft: true
+
+# 100ft zoom - single character, house is important
+pattern_100ft: ⌂
+important_100ft: true
+
+# 200ft zoom - very simple, house still shows
+pattern_200ft: ⌂
+important_200ft: true
+
+# 400ft zoom - house might not show depending on density
+pattern_400ft: ⌂
+important_400ft: false

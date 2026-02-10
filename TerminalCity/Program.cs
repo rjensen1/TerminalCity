@@ -14,6 +14,8 @@ Settings.WindowTitle = "TerminalCity - ASCII City Builder";
 GameState? gameState = null;
 ScreenSurface? mainConsole = null;
 Scenario? currentScenario = null;
+List<BuildingDefinition> buildingDefinitions = new();
+List<StructureDefinition> structureDefinitions = new();
 string? statusMessage = null;
 DateTime? statusMessageTime = null;
 bool fontTestRandomMode = true; // Toggle between random and organized display
@@ -37,6 +39,15 @@ void Startup(object? sender, GameHost host)
     // Load scenario
     var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
     currentScenario = ScenarioParser.LoadFromFile(scenarioPath);
+
+    // Load building and structure definitions
+    var residentialPath = Path.Combine("definitions", "buildings", "buildings_residential.txt");
+    var agriculturePath = Path.Combine("definitions", "buildings", "buildings_agriculture.txt");
+    var structuresPath = Path.Combine("definitions", "outbuildings", "outbuildings_structures.txt");
+
+    buildingDefinitions.AddRange(BuildingParser.LoadFromFile(residentialPath));
+    buildingDefinitions.AddRange(BuildingParser.LoadFromFile(agriculturePath));
+    structureDefinitions.AddRange(StructureParser.LoadFromFile(structuresPath));
 
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
@@ -780,20 +791,32 @@ bool IsRoadTile(TileType type)
 int GetStructurePriority(string? cropType)
 {
     // Determines which structures are important to show at far zoom
-    // Higher number = more important
-    // TODO: In the future, make this definable in the structure definition files
-    // (e.g., add a "zoom_priority" or "importance" field to agriculture.txt and structures.txt)
-    return cropType switch
+    // Uses the importance flags from building/structure definition files
+    // Higher number = more important (1 for important, 0 for not important)
+
+    if (cropType == null) return 0;
+
+    // Special cases that aren't buildings/structures
+    if (cropType == "yard" || cropType == "driveway") return 0;
+
+    // Try to find building definition
+    var buildingDef = buildingDefinitions.FirstOrDefault(b => b.Id == cropType);
+    if (buildingDef != null)
     {
-        "farmhouse" => 5,  // Most important - always show
-        "barn" => 4,       // Important - always show
-        "shed" => 3,       // Less important - show if no farmhouse/barn
-        "well" => 0,       // Not visible at far zoom
-        "silo" => 0,       // Not visible at far zoom (per user requirement)
-        "driveway" => 0,   // Not visible at far zoom
-        "yard" => 0,       // Not visible at far zoom
-        _ => 0
-    };
+        var pattern = GetBuildingPattern(buildingDef);
+        return pattern?.Important == true ? 1 : 0;
+    }
+
+    // Try to find structure definition
+    var structureDef = structureDefinitions.FirstOrDefault(s =>
+        s.Id == cropType || s.VariantOf == cropType);
+    if (structureDef != null)
+    {
+        var pattern = GetStructurePattern(structureDef);
+        return pattern?.Important == true ? 1 : 0;
+    }
+
+    return 0;
 }
 
 void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
@@ -1031,7 +1054,7 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
     // Handle farmstead structures (stored as Grass type with structure name in CropType)
     if (tile.Type == TileType.Grass && tile.CropType != null)
     {
-        return GetFarmsteadStructureAppearance(tile.CropType);
+        return GetFarmsteadStructureAppearance(tile);
     }
 
     return tile.Type switch
@@ -1114,40 +1137,94 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
     };
 }
 
-(char glyph, Color foreground, Color background) GetFarmsteadStructureAppearance(string structureType)
+(char glyph, Color foreground, Color background) GetFarmsteadStructureAppearance(Tile tile)
 {
-    // TODO: Zoom-level building patterns
-    // At 25ft zoom (ZoomLevel = 2), multi-tile buildings should use pattern_25ft from building definitions
-    // Need to:
-    // 1. Load building definitions (parse agriculture.txt, structures.txt)
-    // 2. Track which position within a multi-tile building each tile is
-    // 3. Look up the character for that position from the pattern
-    // 4. Handle different zoom levels (100ft uses display_char, 25ft uses pattern_25ft)
-    //
-    // For now, using hardcoded single-character appearances
+    var structureType = tile.CropType;
+    if (structureType == null)
+        return ('.', Color.Green, Color.DarkGreen);
 
-    return structureType switch
+    // Special cases that aren't buildings/structures
+    if (structureType == "yard")
+        return ('.', Color.Green, Color.DarkGreen);
+    if (structureType == "driveway")
+        return ((char)176, Color.Tan, Color.SaddleBrown);
+
+    // Try to find building definition (check by id)
+    var buildingDef = buildingDefinitions.FirstOrDefault(b => b.Id == structureType);
+    if (buildingDef != null)
     {
-        // Main buildings from agriculture.txt
-        "farmhouse" => ((char)127, Color.White, Color.DarkKhaki),      // ⌂ white house
-        "barn" => ((char)127, Color.Red, Color.Peru),                  // ⌂ red barn
-        "silo" => ((char)186, Color.Silver, Color.SaddleBrown),        // ║ silver silo
+        return GetBuildingAppearance(buildingDef, tile);
+    }
 
-        // Outbuildings from structures.txt
-        "shed" => ((char)254, Color.Brown, Color.SaddleBrown),         // ■ brown shed
-        "well" => ((char)9, Color.Gray, Color.DarkGray),               // ○ gray well
-        "chicken_coop" => ((char)254, Color.Red, Color.DarkRed),       // ▪ red coop
-        "woodshed" => ((char)178, Color.SaddleBrown, Color.Peru),      // ▓ woodshed
-        "outhouse" => ((char)10, Color.Gray, Color.DarkGray),          // ◙ outhouse
-        "smokehouse" => ((char)177, Color.DarkGray, Color.Black),      // ▒ smokehouse
+    // Try to find structure definition (check by id or variant_of)
+    var structureDef = structureDefinitions.FirstOrDefault(s =>
+        s.Id == structureType || s.VariantOf == structureType);
+    if (structureDef != null)
+    {
+        return GetStructureAppearance(structureDef);
+    }
 
-        // Yard is just grass
-        "yard" => ('.', Color.Green, Color.DarkGreen),
+    // Fallback to grass
+    return ('.', Color.Green, Color.DarkGreen);
+}
 
-        // Driveway is dirt/gravel
-        "driveway" => ((char)176, Color.Tan, Color.SaddleBrown),       // ░ light shade
+(char glyph, Color foreground, Color background) GetBuildingAppearance(BuildingDefinition def, Tile tile)
+{
+    var pattern = GetBuildingPattern(def);
+    if (pattern == null)
+        return ('.', def.Color, def.BackgroundColor);
 
-        _ => ('.', Color.Green, Color.DarkGreen) // Default to grass
+    // At 25ft zoom with multi-tile buildings, use the building offset to look up the correct character
+    if (gameState?.ZoomLevel == 2 && tile.BuildingOffset.HasValue && pattern.GetHeight() > 1)
+    {
+        var offset = tile.BuildingOffset.Value;
+        char ch = pattern.GetCharAt(offset.x, offset.y);
+        return (ch, def.Color, def.BackgroundColor);
+    }
+
+    // For single-character patterns or other zoom levels, use the first character
+    char defaultCh = pattern.Pattern.Length > 0 ? pattern.Pattern[0] : '.';
+    return (defaultCh, def.Color, def.BackgroundColor);
+}
+
+(char glyph, Color foreground, Color background) GetStructureAppearance(StructureDefinition def)
+{
+    var pattern = GetStructurePattern(def);
+    if (pattern == null)
+        return ('.', def.Color, def.BackgroundColor);
+
+    // Structures are typically 1x1, so just use the pattern directly
+    char ch = pattern.Pattern.Length > 0 ? pattern.Pattern[0] : '.';
+    return (ch, def.Color, def.BackgroundColor);
+}
+
+ZoomPattern? GetBuildingPattern(BuildingDefinition def)
+{
+    if (gameState == null) return null;
+
+    return gameState.ZoomLevel switch
+    {
+        2 => def.Pattern25ft,   // 25ft zoom
+        1 => def.Pattern50ft,   // 50ft zoom
+        0 => def.Pattern100ft,  // 100ft zoom (default)
+        -1 => def.Pattern200ft, // 200ft zoom
+        -2 => def.Pattern400ft, // 400ft zoom
+        _ => def.Pattern100ft   // Default to 100ft
+    };
+}
+
+ZoomPattern? GetStructurePattern(StructureDefinition def)
+{
+    if (gameState == null) return null;
+
+    return gameState.ZoomLevel switch
+    {
+        2 => def.Pattern25ft,   // 25ft zoom
+        1 => def.Pattern50ft,   // 50ft zoom
+        0 => def.Pattern100ft,  // 100ft zoom (default)
+        -1 => def.Pattern200ft, // 200ft zoom
+        -2 => def.Pattern400ft, // 400ft zoom
+        _ => def.Pattern100ft   // Default to 100ft
     };
 }
 

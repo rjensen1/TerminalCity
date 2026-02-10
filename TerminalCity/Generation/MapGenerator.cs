@@ -45,15 +45,14 @@ public static class MapGenerator
         // Step 3.6: Add farmsteads (house/barn clusters) to some plots
         AddFarmsteads(gameState, random);
 
-        // TEST: Place a visible farmstead at map center for debugging
-        int centerX = gameState.MapWidth / 2;
-        int centerY = gameState.MapHeight / 2;
-        gameState.Tiles[centerX + 2, centerY + 2] = new Tile(TileType.Grass, null, null, "farmhouse");
-        gameState.Tiles[centerX + 3, centerY + 2] = new Tile(TileType.Grass, null, null, "farmhouse");
-        gameState.Tiles[centerX + 4, centerY + 2] = new Tile(TileType.Grass, null, null, "barn");
-        gameState.Tiles[centerX + 5, centerY + 2] = new Tile(TileType.Grass, null, null, "barn");
-        gameState.Tiles[centerX + 6, centerY + 2] = new Tile(TileType.Grass, null, null, "shed");
-        Console.WriteLine($"DEBUG TEST: Placed test farmstead at center+2 ({centerX + 2}, {centerY + 2})");
+        // DEBUG: Force place a farmstead at specific location for testing
+        var debugFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
+        var debugTemplate = FarmsteadParser.LoadFromFile(debugFarmsteadPath);
+        if (debugTemplate != null)
+        {
+            PlaceFarmstead(gameState, debugTemplate, 92, 103);
+            Console.WriteLine($"DEBUG: Force-placed farmstead at (92, 103)");
+        }
 
         // Step 4: Add trees/vegetation
         if (scenario.InitialTreesPercent > 0)
@@ -483,6 +482,33 @@ public static class MapGenerator
         Console.WriteLine($"DEBUG: PlaceFarmstead called at ({startX},{startY}) with template {template.Width}x{template.Height}");
         Console.WriteLine($"DEBUG: Template has {template.MapRows.Count} map rows");
 
+        // Track the first occurrence of multi-tile buildings to calculate offsets
+        Dictionary<string, (int minX, int minY)> buildingOrigins = new();
+
+        // First pass: find the top-left corner of each multi-tile building
+        for (int y = 0; y < template.Height; y++)
+        {
+            for (int x = 0; x < template.Width; x++)
+            {
+                var tileType = template.GetTileTypeAt(x, y);
+                if (tileType == null) continue;
+
+                var type = tileType.ToLower();
+                if (type == "tiny_farmhouse" || type == "barn")
+                {
+                    if (!buildingOrigins.ContainsKey(type))
+                    {
+                        buildingOrigins[type] = (x, y);
+                    }
+                    else
+                    {
+                        var origin = buildingOrigins[type];
+                        buildingOrigins[type] = (Math.Min(origin.minX, x), Math.Min(origin.minY, y));
+                    }
+                }
+            }
+        }
+
         int tilesPlaced = 0;
         for (int y = 0; y < template.Height; y++)
         {
@@ -508,12 +534,23 @@ public static class MapGenerator
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "yard");
                         tilesPlaced++;
                         break;
-                    case "farmhouse":
-                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "farmhouse");
+                    case "tiny_farmhouse":
+                        var houseOrigin = buildingOrigins["tiny_farmhouse"];
+                        var houseOffset = (x - houseOrigin.minX, y - houseOrigin.minY);
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "tiny_farmhouse", houseOffset);
                         tilesPlaced++;
                         break;
                     case "barn":
-                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn");
+                        if (buildingOrigins.ContainsKey("barn"))
+                        {
+                            var barnOrigin = buildingOrigins["barn"];
+                            var barnOffset = (x - barnOrigin.minX, y - barnOrigin.minY);
+                            gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn", barnOffset);
+                        }
+                        else
+                        {
+                            gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn");
+                        }
                         tilesPlaced++;
                         break;
                     case "shed":

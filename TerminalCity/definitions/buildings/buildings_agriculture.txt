@@ -40,7 +40,6 @@ height: 2
 cost: 200
 maintenance: 2
 display_char: ║
-display_char_code: 186
 color: Silver
 background_color: SaddleBrown
 unlocked_by_default: true
@@ -57,7 +56,6 @@ height: 2
 cost: 300
 maintenance: 3
 display_char: ⌂
-display_char_code: 127
 color: Red
 background_color: Peru
 unlocked_by_default: true

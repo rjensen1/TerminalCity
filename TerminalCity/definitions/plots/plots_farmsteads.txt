@@ -26,46 +26,5 @@ HH.
 
 legend:
 . = yard
-H = farmhouse
+H = tiny_farmhouse
 S = shed
-
-
-[farmstead]
-id: small_farm_with_barn
-name: Small Farm with Barn
-size: 5x4
-description: Farmhouse with barn and driveway
-map:
-.....
-HH.BB
-HH.BB
-..D..
-
-legend:
-. = yard
-H = farmhouse
-B = barn
-S = shed
-D = driveway
-
-
-[farmstead]
-id: medium_farmstead
-name: Medium Farmstead
-size: 6x5
-description: Farmhouse with barn, silo, and outbuildings
-map:
-......
-HHW.BS
-HH..BS
-..DII.
-....S.
-
-legend:
-. = yard
-H = farmhouse
-B = barn
-I = silo
-S = shed
-W = well
-D = driveway
