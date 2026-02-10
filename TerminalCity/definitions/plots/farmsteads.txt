@@ -7,6 +7,12 @@
 # - The legend maps characters to building/area types (H = farmhouse, . = yard)
 # - These are TEMPLATES that get placed within farm plots during map generation
 # - Plot file defines WHERE buildings go, building files define HOW they look
+#
+# ZOOM LEVEL: These maps represent 25ft zoom (maximum detail)
+# - This is the "master layout" showing full tile footprint for each building
+# - A 2x2 farmhouse occupies 4 tiles in the map (shown as HHHH)
+# - At other zooms (100ft, 50ft), same tiles are blocked but render differently
+# - Building definition files control visual appearance at each zoom level
 
 [farmstead]
 id: tiny_farmhouse
