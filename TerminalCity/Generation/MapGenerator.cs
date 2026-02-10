@@ -414,7 +414,7 @@ public static class MapGenerator
     private static void AddFarmsteads(GameState gameState, Random random)
     {
         // Load farmstead template (for now, just load the first one)
-        var farmsteadPath = Path.Combine("definitions", "plots", "farmsteads.txt");
+        var farmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
         var template = FarmsteadParser.LoadFromFile(farmsteadPath);
 
         if (template == null)

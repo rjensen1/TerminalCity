@@ -9,7 +9,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesCorrectly()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -29,7 +29,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesDescription()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -45,7 +45,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesParentCity()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -61,7 +61,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesObjectives()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -78,7 +78,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesChallenges()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -106,7 +106,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesDemandLevels()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -123,7 +123,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesTerrainGeneration()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -139,7 +139,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesRoadGrid()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);
@@ -155,7 +155,7 @@ public class ScenarioParserTests
     public void LoadFromFile_BedroomCommunity_ParsesInitialLandUse()
     {
         // Arrange
-        var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+        var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
 
         // Act
         var scenario = ScenarioParser.LoadFromFile(scenarioPath);

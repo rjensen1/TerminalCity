@@ -23,7 +23,7 @@ public class MapGeneratorTests
         }
 
         // Load the tiny farmhouse template
-        var farmsteadPath = Path.Combine("definitions", "plots", "farmsteads.txt");
+        var farmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
         var template = FarmsteadParser.LoadFromFile(farmsteadPath);
 
         Assert.NotNull(template);

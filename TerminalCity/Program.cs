@@ -35,7 +35,7 @@ void Startup(object? sender, GameHost host)
     gameState = new GameState();
 
     // Load scenario
-    var scenarioPath = Path.Combine("definitions", "scenarios", "bedroom_community.txt");
+    var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
     currentScenario = ScenarioParser.LoadFromFile(scenarioPath);
 
     // Create main console
