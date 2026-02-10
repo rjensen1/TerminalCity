@@ -223,6 +223,95 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
                 statusMessageTime = DateTime.Now;
             }
         }
+        // Time of day cycling (T key)
+        else if (keyboard.IsKeyPressed(Keys.T))
+        {
+            gameState.CycleTimeOfDay();
+            statusMessage = $"Time of Day: {gameState.GetTimeOfDayName()}";
+            statusMessageTime = DateTime.Now;
+        }
+        // Weather controls
+        else if (keyboard.IsKeyPressed(Keys.Q))
+        {
+            gameState.CurrentWeather.CycleWeatherCondition();
+            statusMessage = $"Weather: {gameState.CurrentWeather.GetConditionName()}";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.PageUp))
+        {
+            gameState.CurrentWeather.TemperatureF += 10;
+            statusMessage = $"Temperature: {gameState.CurrentWeather.TemperatureF}°F";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.PageDown))
+        {
+            gameState.CurrentWeather.TemperatureF -= 10;
+            statusMessage = $"Temperature: {gameState.CurrentWeather.TemperatureF}°F";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.Home))
+        {
+            gameState.CurrentWeather.WindSpeedMph += 10;
+            gameState.CurrentWeather.WindSpeedMph = Math.Min(gameState.CurrentWeather.WindSpeedMph, 150); // Cap at 150 mph
+            statusMessage = $"Wind: {gameState.CurrentWeather.GetWindDescription()}";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.End))
+        {
+            gameState.CurrentWeather.WindSpeedMph -= 10;
+            gameState.CurrentWeather.WindSpeedMph = Math.Max(gameState.CurrentWeather.WindSpeedMph, 0); // Min 0 mph
+            statusMessage = $"Wind: {gameState.CurrentWeather.GetWindDescription()}";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.Insert))
+        {
+            gameState.CurrentWeather.CycleWindDirection();
+            statusMessage = $"Wind Direction: {gameState.CurrentWeather.WindDirection}";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.Delete))
+        {
+            gameState.CurrentWeather.HumidityPercent += 10;
+            if (gameState.CurrentWeather.HumidityPercent > 100)
+                gameState.CurrentWeather.HumidityPercent = 0;
+            statusMessage = $"Humidity: {gameState.CurrentWeather.HumidityPercent}%";
+            statusMessageTime = DateTime.Now;
+        }
+        // Atmospheric controls
+        else if (keyboard.IsKeyPressed(Keys.E))
+        {
+            gameState.CurrentWeather.BarometricPressure += 0.1;
+            gameState.CurrentWeather.BarometricPressure = Math.Min(gameState.CurrentWeather.BarometricPressure, 31.5);
+            statusMessage = $"Pressure: {gameState.CurrentWeather.BarometricPressure:F2} inHg";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.R))
+        {
+            gameState.CurrentWeather.BarometricPressure -= 0.1;
+            gameState.CurrentWeather.BarometricPressure = Math.Max(gameState.CurrentWeather.BarometricPressure, 28.0);
+            statusMessage = $"Pressure: {gameState.CurrentWeather.BarometricPressure:F2} inHg";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.F))
+        {
+            gameState.CurrentWeather.VisibilityMiles += 1.0;
+            gameState.CurrentWeather.VisibilityMiles = Math.Min(gameState.CurrentWeather.VisibilityMiles, 20.0);
+            statusMessage = $"Visibility: {gameState.CurrentWeather.VisibilityMiles:F1} mi";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.G))
+        {
+            gameState.CurrentWeather.VisibilityMiles -= 1.0;
+            gameState.CurrentWeather.VisibilityMiles = Math.Max(gameState.CurrentWeather.VisibilityMiles, 0.0);
+            statusMessage = $"Visibility: {gameState.CurrentWeather.VisibilityMiles:F1} mi";
+            statusMessageTime = DateTime.Now;
+        }
+        else if (keyboard.IsKeyPressed(Keys.V))
+        {
+            gameState.CurrentWeather.CycleFireDanger();
+            statusMessage = $"Fire Danger: {gameState.CurrentWeather.GetFireDangerName()}";
+            statusMessageTime = DateTime.Now;
+        }
         // Escape to show exit confirmation
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
@@ -637,7 +726,12 @@ void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
                         int screenX = dataX * scale + sx;
                         int screenY = dataY * scale + sy;
                         if (screenX < viewportWidth && screenY < viewportHeight)
-                            mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
+                        {
+                            // Apply time of day lighting
+                            var litFg = LightingEffects.ApplyTimeOfDayLighting(foreground, gameState.VisualTimeOfDay);
+                            var litBg = LightingEffects.ApplyTimeOfDayLighting(background, gameState.VisualTimeOfDay);
+                            mainConsole.Print(screenX, screenY, glyph.ToString(), litFg, litBg);
+                        }
                     }
                 }
             }
@@ -689,11 +783,15 @@ void RenderBoundaryZoomedIn(int dataX, int dataY, int scale, int worldX, int wor
 
                 if (showBoundary)
                 {
-                    mainConsole.Print(screenX, screenY, boundaryGlyph.ToString(), boundaryFg, boundaryBg);
+                    var litFg = LightingEffects.ApplyTimeOfDayLighting(boundaryFg, gameState.VisualTimeOfDay);
+                    var litBg = LightingEffects.ApplyTimeOfDayLighting(boundaryBg, gameState.VisualTimeOfDay);
+                    mainConsole.Print(screenX, screenY, boundaryGlyph.ToString(), litFg, litBg);
                 }
                 else
                 {
-                    mainConsole.Print(screenX, screenY, cropGlyph.ToString(), cropFg, cropBg);
+                    var litFg = LightingEffects.ApplyTimeOfDayLighting(cropFg, gameState.VisualTimeOfDay);
+                    var litBg = LightingEffects.ApplyTimeOfDayLighting(cropBg, gameState.VisualTimeOfDay);
+                    mainConsole.Print(screenX, screenY, cropGlyph.ToString(), litFg, litBg);
                 }
             }
         }
@@ -714,7 +812,11 @@ void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY,
             int screenX = dataX * scale + sx;
             int screenY = dataY * scale + sy;
             if (screenX < viewportWidth && screenY < viewportHeight)
-                mainConsole.Print(screenX, screenY, ".", naturalGround, naturalGroundDark);
+            {
+                var litFg = LightingEffects.ApplyTimeOfDayLighting(naturalGround, gameState.VisualTimeOfDay);
+                var litBg = LightingEffects.ApplyTimeOfDayLighting(naturalGroundDark, gameState.VisualTimeOfDay);
+                mainConsole.Print(screenX, screenY, ".", litFg, litBg);
+            }
         }
     }
 
@@ -747,7 +849,11 @@ void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY,
             int screenX = dataX * scale + midX;
             int screenY = dataY * scale + sy;
             if (screenX < viewportWidth && screenY < viewportHeight)
-                mainConsole.Print(screenX, screenY, vRoadGlyph.ToString(), vForeground, vBackground);
+            {
+                var litFg = LightingEffects.ApplyTimeOfDayLighting(vForeground, gameState.VisualTimeOfDay);
+                var litBg = LightingEffects.ApplyTimeOfDayLighting(vBackground, gameState.VisualTimeOfDay);
+                mainConsole.Print(screenX, screenY, vRoadGlyph.ToString(), litFg, litBg);
+            }
         }
     }
 
@@ -760,7 +866,11 @@ void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY,
             int screenX = dataX * scale + sx;
             int screenY = dataY * scale + midY;
             if (screenX < viewportWidth && screenY < viewportHeight)
-                mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), hForeground, hBackground);
+            {
+                var litFg = LightingEffects.ApplyTimeOfDayLighting(hForeground, gameState.VisualTimeOfDay);
+                var litBg = LightingEffects.ApplyTimeOfDayLighting(hBackground, gameState.VisualTimeOfDay);
+                mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), litFg, litBg);
+            }
         }
     }
 
@@ -770,7 +880,11 @@ void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY,
         int screenX = dataX * scale + midX;
         int screenY = dataY * scale + midY;
         if (screenX < viewportWidth && screenY < viewportHeight)
-            mainConsole.Print(screenX, screenY, intersectionChar.ToString(), hForeground, hBackground);
+        {
+            var litFg = LightingEffects.ApplyTimeOfDayLighting(hForeground, gameState.VisualTimeOfDay);
+            var litBg = LightingEffects.ApplyTimeOfDayLighting(hBackground, gameState.VisualTimeOfDay);
+            mainConsole.Print(screenX, screenY, intersectionChar.ToString(), litFg, litBg);
+        }
     }
 
     // If no neighbors (isolated road tile), use horizontal road character
@@ -779,7 +893,11 @@ void RenderRoadZoomedIn(int dataX, int dataY, int scale, int worldX, int worldY,
         int screenX = dataX * scale + midX;
         int screenY = dataY * scale + midY;
         if (screenX < viewportWidth && screenY < viewportHeight)
-            mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), hForeground, hBackground);
+        {
+            var litFg = LightingEffects.ApplyTimeOfDayLighting(hForeground, gameState.VisualTimeOfDay);
+            var litBg = LightingEffects.ApplyTimeOfDayLighting(hBackground, gameState.VisualTimeOfDay);
+            mainConsole.Print(screenX, screenY, hRoadGlyph.ToString(), litFg, litBg);
+        }
     }
 }
 
@@ -1033,7 +1151,10 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                 }
             }
 
-            mainConsole.Print(screenX, screenY, glyph.ToString(), foreground, background);
+            // Apply time of day lighting
+            var litFg = LightingEffects.ApplyTimeOfDayLighting(foreground, gameState.VisualTimeOfDay);
+            var litBg = LightingEffects.ApplyTimeOfDayLighting(background, gameState.VisualTimeOfDay);
+            mainConsole.Print(screenX, screenY, glyph.ToString(), litFg, litBg);
         }
     }
 }
@@ -1244,6 +1365,56 @@ void RenderUI(ScreenSurface console, int uiStartY)
     var zoomText = $"Zoom: {gameState.GetZoomLevelName()} | 1 tile = {gameState.GetTileScale()}ft";
     int zoomX = console.Width - zoomText.Length - 1;
     console.Print(zoomX, 1, zoomText, Color.Cyan, Color.Black);
+
+    // Time of day display (third line top right)
+    var timeText = $"Time: {gameState.GetTimeOfDayName()} (Press T)";
+    int timeX = console.Width - timeText.Length - 1;
+    // Color changes based on time of day for visual feedback
+    var timeColor = gameState.VisualTimeOfDay switch
+    {
+        TimeOfDay.Dawn => Color.Orange,
+        TimeOfDay.Morning => Color.Yellow,
+        TimeOfDay.Midday => Color.White,
+        TimeOfDay.Afternoon => Color.LightYellow,
+        TimeOfDay.Dusk => Color.OrangeRed,
+        TimeOfDay.Evening => Color.Purple,
+        TimeOfDay.Night => Color.DarkBlue,
+        _ => Color.White
+    };
+    console.Print(timeX, 2, timeText, timeColor, Color.Black);
+
+    // Weather display (left side, top)
+    var weatherText = $"Weather: {gameState.CurrentWeather.GetConditionName()} (Q)";
+    console.Print(1, 0, weatherText, Color.LightBlue, Color.Black);
+
+    var tempText = $"Temp: {gameState.CurrentWeather.TemperatureF}°F (PgUp/PgDn)";
+    console.Print(1, 1, tempText, Color.Orange, Color.Black);
+
+    var windText = $"Wind: {gameState.CurrentWeather.GetWindDescription()} (Home/End,Ins)";
+    console.Print(1, 2, windText, Color.Cyan, Color.Black);
+
+    var humidityText = $"Humidity: {gameState.CurrentWeather.HumidityPercent}% (Del)";
+    console.Print(1, 3, humidityText, Color.LightGreen, Color.Black);
+
+    // Atmospheric display (left side, continued)
+    var pressureText = $"Pressure: {gameState.CurrentWeather.BarometricPressure:F2} inHg (E/R)";
+    console.Print(1, 4, pressureText, Color.Violet, Color.Black);
+
+    var visibilityText = $"Visibility: {gameState.CurrentWeather.VisibilityMiles:F1} mi (F/G)";
+    console.Print(1, 5, visibilityText, Color.LightGray, Color.Black);
+
+    var fireDangerText = $"Fire Danger: {gameState.CurrentWeather.GetFireDangerName()} (V)";
+    console.Print(1, 6, fireDangerText, gameState.CurrentWeather.GetFireDangerColor(), Color.Black);
+
+    // Celestial display (left side, continued)
+    var sunriseText = $"Sunrise: {Weather.GetSunriseTime(gameState.CurrentDate)}";
+    var sunsetText = $"Sunset: {Weather.GetSunsetTime(gameState.CurrentDate)}";
+    var sunTimesText = $"{sunriseText} | {sunsetText}";
+    console.Print(1, 7, sunTimesText, Color.Yellow, Color.Black);
+
+    var moonPhase = Weather.GetMoonPhase(gameState.CurrentDate);
+    var moonText = $"Moon: {Weather.GetMoonPhaseName(moonPhase)}";
+    console.Print(1, 8, moonText, Color.LightCyan, Color.Black);
 
     // Draw separator
     console.DrawLine(new Point(0, uiStartY), new Point(console.Width - 1, uiStartY), '─', Color.Gray);

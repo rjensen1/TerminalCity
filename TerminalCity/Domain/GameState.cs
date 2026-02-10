@@ -16,6 +16,12 @@ public class GameState
     public Point CameraPosition { get; set; }
     public Dialog? CurrentDialog { get; set; } = null; // Modal dialog overlay
 
+    // Visual time of day (cosmetic only, not tied to game time)
+    public TimeOfDay VisualTimeOfDay { get; set; } = TimeOfDay.Midday;
+
+    // Weather state (cosmetic only for now)
+    public Weather CurrentWeather { get; set; } = new Weather();
+
     // Zoom/Scale system
     public int ZoomLevel { get; set; } = 0; // 0 = default, negative = zoomed out, positive = zoomed in
 
@@ -132,6 +138,42 @@ public class GameState
             9 or 10 or 11 => Season.Fall,
             12 or 1 or 2 => Season.Winter,
             _ => Season.Spring
+        };
+    }
+
+    /// <summary>
+    /// Cycle to next time of day (for visual lighting only)
+    /// </summary>
+    public void CycleTimeOfDay()
+    {
+        VisualTimeOfDay = VisualTimeOfDay switch
+        {
+            TimeOfDay.Dawn => TimeOfDay.Morning,
+            TimeOfDay.Morning => TimeOfDay.Midday,
+            TimeOfDay.Midday => TimeOfDay.Afternoon,
+            TimeOfDay.Afternoon => TimeOfDay.Dusk,
+            TimeOfDay.Dusk => TimeOfDay.Evening,
+            TimeOfDay.Evening => TimeOfDay.Night,
+            TimeOfDay.Night => TimeOfDay.Dawn,
+            _ => TimeOfDay.Midday
+        };
+    }
+
+    /// <summary>
+    /// Get display name for current visual time of day
+    /// </summary>
+    public string GetTimeOfDayName()
+    {
+        return VisualTimeOfDay switch
+        {
+            TimeOfDay.Dawn => "Dawn",
+            TimeOfDay.Morning => "Morning",
+            TimeOfDay.Midday => "Midday",
+            TimeOfDay.Afternoon => "Afternoon",
+            TimeOfDay.Dusk => "Dusk",
+            TimeOfDay.Evening => "Evening",
+            TimeOfDay.Night => "Night",
+            _ => "Midday"
         };
     }
 
