@@ -46,19 +46,19 @@ public class MapGeneratorTests
         Assert.Equal(TileType.Grass, gameState.Tiles[7, 5].Type);
         Assert.Equal("yard", gameState.Tiles[7, 5].CropType);
 
-        // Row 1: HHS (farmhouse, farmhouse, shed)
+        // Row 1: HHS (tiny_farmhouse, tiny_farmhouse, shed)
         Assert.Equal(TileType.Grass, gameState.Tiles[5, 6].Type);
-        Assert.Equal("farmhouse", gameState.Tiles[5, 6].CropType);
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[5, 6].CropType);
         Assert.Equal(TileType.Grass, gameState.Tiles[6, 6].Type);
-        Assert.Equal("farmhouse", gameState.Tiles[6, 6].CropType);
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[6, 6].CropType);
         Assert.Equal(TileType.Grass, gameState.Tiles[7, 6].Type);
         Assert.Equal("shed", gameState.Tiles[7, 6].CropType);
 
-        // Row 2: HH. (farmhouse, farmhouse, yard)
+        // Row 2: HH. (tiny_farmhouse, tiny_farmhouse, yard)
         Assert.Equal(TileType.Grass, gameState.Tiles[5, 7].Type);
-        Assert.Equal("farmhouse", gameState.Tiles[5, 7].CropType);
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[5, 7].CropType);
         Assert.Equal(TileType.Grass, gameState.Tiles[6, 7].Type);
-        Assert.Equal("farmhouse", gameState.Tiles[6, 7].CropType);
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[6, 7].CropType);
         Assert.Equal(TileType.Grass, gameState.Tiles[7, 7].Type);
         Assert.Equal("yard", gameState.Tiles[7, 7].CropType);
 
@@ -95,8 +95,8 @@ public class MapGeneratorTests
                     case "yard":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "yard");
                         break;
-                    case "farmhouse":
-                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "farmhouse");
+                    case "tiny_farmhouse":
+                        gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "tiny_farmhouse");
                         break;
                     case "barn":
                         gameState.Tiles[worldX, worldY] = new Tile(TileType.Grass, null, null, "barn");

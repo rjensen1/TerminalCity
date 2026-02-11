@@ -23,7 +23,7 @@ height: 2
 cost: 300
 maintenance: 3
 color: White
-background_color: DarkKhaki
+background_color: DarkGreen
 unlocked_by_default: true
 era_available: 1700
 era_obsolete: 9999

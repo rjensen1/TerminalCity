@@ -1,0 +1,24 @@
+[scenario]
+id: test_tiny
+name: Test Tiny Map
+game_type: traditional
+
+[description]
+Tiny 10x10 map for debugging farmstead rendering
+
+[starting_conditions]
+year: 1950
+population: 0
+money: 10000
+map_size: 10x10
+
+[terrain_generation]
+type: flat_farmland
+features:
+  - existing_road_grid
+
+[road_grid]
+spacing: 8
+type: dirt_road
+main_vertical_road: false
+main_horizontal_road: false

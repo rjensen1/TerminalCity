@@ -3216,3 +3216,64 @@ ASCII rendering is fast - shouldn't be a problem!
 - Idea: Transition animations between zoom levels (smooth scaling effect)
 - Idea: Zoom level affects time scale (Zoom 0 = fast time, Zoom 3 = pause/slow)
 - Idea: "Tourist mode" - zoom in and watch citizens go about their day
+
+### Real-World Urban Dynamics to Model
+
+#### Household Demographics & Housing Mismatch
+**Observation from Livonia, MI**: Houses that need gutting sell in <1 month, but commercial buildings within walking distance sit empty.
+
+**Contributing factors**:
+- **Changing household sizes**: Houses built for 7-person families now have 2-3 occupants (aging, smaller families, empty nesters)
+- **Artificial scarcity**: Total housing units don't increase even though bedrooms-per-capita increases dramatically
+- **Commercial oversupply**: Commercial space built for different era (larger families, more local shopping) no longer needed
+- **Zoning inflexibility**: Can't easily convert commercial→residential despite demand mismatch
+- **Investment dynamics**: Houses appreciate (land value + scarcity), commercial depreciates (broken revenue model)
+
+**Game mechanics this suggests**:
+- Track **household occupancy** separately from **housing units** (one 5-bedroom house ≠ five 1-bedroom apartments)
+- Buildings have **occupancy lifecycle**: Family moves in (2 adults, 3 kids) → kids grow up and move out → 2 empty nesters remain
+- **Commercial viability** tied to foot traffic, which depends on actual population density + behavior patterns
+- **Zoning conversion costs**: High friction to repurpose buildings, creating persistent mismatches
+- **Population aging mechanics**: Neighborhoods get older over time unless new families move in
+- Empty bedrooms don't help housing crisis - need actual *units*
+
+#### Economic Shock Events (COVID Example)
+**The 2020 Pandemic** demonstrates how behavior changes instantly while infrastructure adapts slowly.
+
+**Immediate behavioral shifts**:
+- 30-40% of workforce suddenly remote
+- Unemployment spike with government stimulus cushion
+- Commercial foot traffic collapse (especially downtown, office-adjacent retail)
+- Residential space needs change (need home office, want yards/space)
+
+**Infrastructure can't adapt**:
+- Office buildings empty but conversion to residential is expensive/difficult
+- Downtown restaurants/retail built for office workers have no customers
+- Suburban houses in demand but can't build fast enough
+- Zoning treats "office district" and "residential" as immutable
+
+**Game mechanics this suggests**:
+- **Event system**: Pandemics, recessions, tech shifts that change behavior patterns overnight
+- **Work-from-home toggle**: Some jobs can happen anywhere, others require physical presence
+  - WFH jobs reduce commercial demand near offices, increase residential demand for space
+  - Location becomes less important for WFH, so people spread out geographically
+- **Behavior vs infrastructure lag**: People's patterns change instantly (overnight), buildings change slowly (years/decades)
+- **Government policy responses**:
+  - Stimulus payments (keep demand alive despite unemployment)
+  - Unemployment benefits (cushion vs pure economic collapse)
+  - Zoning reform (enable adaptive reuse)
+  - Eviction moratoriums
+- **Building conversion mechanics**:
+  - Cost/difficulty to repurpose buildings varies (commercial→residential is HARD)
+  - Some buildings become "stranded assets" that can't economically adapt
+  - Mixed-use zoning enables flexibility
+- **Foot traffic modeling**: Commercial viability depends on nearby population + their movement patterns
+  - Office workers = daytime foot traffic
+  - Residents = evening/weekend foot traffic
+  - Remote workers = different pattern entirely
+
+**Interesting gameplay implications**:
+- Do you allow mixed-use zoning? More flexible but potentially chaotic
+- How do you handle stranded commercial assets after economic shift?
+- Can government intervention prevent collapse or just delay it?
+- WFH could make housing location more flexible, changing growth patterns entirely

@@ -16,6 +16,15 @@ public static class MapGenerator
     {
         var random = new Random();
 
+        Console.WriteLine($"DEBUG: GenerateFromScenario called");
+        Console.WriteLine($"DEBUG: Scenario name: {scenario.Name}");
+        Console.WriteLine($"DEBUG: Map size: {scenario.MapSize}");
+        Console.WriteLine($"DEBUG: TerrainFeatures count: {scenario.TerrainFeatures.Count}");
+        foreach (var feature in scenario.TerrainFeatures)
+        {
+            Console.WriteLine($"DEBUG:   - {feature}");
+        }
+
         // Parse map size (e.g., "100x100")
         var sizeParts = scenario.MapSize.Split('x');
         int width = int.Parse(sizeParts[0]);
@@ -23,15 +32,22 @@ public static class MapGenerator
 
         // Step 1: Fill with base terrain based on scenario
         FillBaseTerrain(gameState, scenario, random);
+        Console.WriteLine($"DEBUG: FillBaseTerrain completed");
 
         // Step 2: Generate road grid if specified
         if (scenario.TerrainFeatures.Contains("existing_road_grid"))
         {
+            Console.WriteLine($"DEBUG: Generating road grid (spacing: {scenario.RoadGridSpacing})");
             GenerateRoadGrid(gameState, scenario);
+        }
+        else
+        {
+            Console.WriteLine($"DEBUG: No road grid (existing_road_grid not in TerrainFeatures)");
         }
 
         // Step 2.5: Generate plots (bounded by roads)
         GeneratePlots(gameState, random);
+        Console.WriteLine($"DEBUG: Generated {gameState.Plots.Count} plots");
 
         // Step 3: Add farms based on percentage
         if (scenario.InitialFarmPercent > 0)
@@ -44,14 +60,45 @@ public static class MapGenerator
 
         // Step 3.6: Add farmsteads (house/barn clusters) to some plots
         AddFarmsteads(gameState, random);
+        var farmPlots = gameState.Plots.Count(p => p.Type == PlotType.Farmland);
+        Console.WriteLine($"DEBUG: Farm plots: {farmPlots}");
 
-        // DEBUG: Force place a farmstead at specific location for testing
-        var debugFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
-        var debugTemplate = FarmsteadParser.LoadFromFile(debugFarmsteadPath);
-        if (debugTemplate != null)
+        // For small maps (debugging), always place a test farmstead at center
+        // Since small maps may not have suitable plots with south roads
+        if (gameState.MapWidth <= 20 || gameState.MapHeight <= 20)
         {
-            PlaceFarmstead(gameState, debugTemplate, 92, 103);
-            Console.WriteLine($"DEBUG: Force-placed farmstead at (92, 103)");
+            Console.WriteLine($"DEBUG: Small map detected ({gameState.MapWidth}x{gameState.MapHeight}), placing test farmstead at center");
+            var testFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
+            var testTemplate = FarmsteadParser.LoadFromFile(testFarmsteadPath);
+            if (testTemplate != null)
+            {
+                int centerX = gameState.MapWidth / 2;
+                int centerY = gameState.MapHeight / 2;
+                PlaceFarmstead(gameState, testTemplate, centerX, centerY);
+                Console.WriteLine($"DEBUG: Placed test farmstead at map center ({centerX},{centerY})");
+            }
+            else
+            {
+                Console.WriteLine($"DEBUG: Failed to load farmstead template");
+            }
+        }
+        // Otherwise, if no farmsteads were placed, add one for testing at map center
+        else if (gameState.Plots.Count == 0 || !gameState.Plots.Any(p => p.Type == PlotType.Farmland))
+        {
+            Console.WriteLine($"DEBUG: No farm plots, placing test farmstead");
+            var testFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
+            var testTemplate = FarmsteadParser.LoadFromFile(testFarmsteadPath);
+            if (testTemplate != null)
+            {
+                int centerX = gameState.MapWidth / 2;
+                int centerY = gameState.MapHeight / 2;
+                PlaceFarmstead(gameState, testTemplate, centerX, centerY);
+                Console.WriteLine($"DEBUG: Placed test farmstead at map center ({centerX},{centerY})");
+            }
+            else
+            {
+                Console.WriteLine($"DEBUG: Failed to load farmstead template");
+            }
         }
 
         // Step 4: Add trees/vegetation
@@ -432,6 +479,8 @@ public static class MapGenerator
             if (plot.Type != PlotType.Farmland) continue;
             checkedPlots++;
 
+            Console.WriteLine($"DEBUG: Checking plot at ({plot.Bounds.X},{plot.Bounds.Y}) size {plot.Bounds.Width}x{plot.Bounds.Height}");
+
             if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height)
             {
                 Console.WriteLine($"DEBUG: Plot at ({plot.Bounds.X},{plot.Bounds.Y}) too small: {plot.Bounds.Width}x{plot.Bounds.Height}");
@@ -440,7 +489,12 @@ public static class MapGenerator
 
             // Check if there's a road immediately south of this plot
             int southY = plot.Bounds.Y + plot.Bounds.Height;
-            if (southY >= gameState.MapHeight) continue;
+            Console.WriteLine($"DEBUG: Checking for road at southY={southY} (mapHeight={gameState.MapHeight})");
+            if (southY >= gameState.MapHeight)
+            {
+                Console.WriteLine($"DEBUG: Plot at ({plot.Bounds.X},{plot.Bounds.Y}) extends to map edge (no room for south road)");
+                continue;
+            }
 
             bool hasRoadSouth = false;
             for (int x = plot.Bounds.X; x < plot.Bounds.X + plot.Bounds.Width; x++)

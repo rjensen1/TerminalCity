@@ -37,7 +37,7 @@ void Startup(object? sender, GameHost host)
     gameState = new GameState();
 
     // Load scenario
-    var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_bedroom_community.txt");
+    var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_test_tiny.txt");
     currentScenario = ScenarioParser.LoadFromFile(scenarioPath);
 
     // Load building and structure definitions
@@ -82,8 +82,10 @@ void OnUpdate(IScreenObject console, TimeSpan delta)
         {
             timeAccumulator -= updateInterval;
             gameState.AdvanceTime();
-            Render();
         }
+
+        // Always render every frame (camera movement, input response, etc.)
+        Render();
     }
 }
 
@@ -312,6 +314,13 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
             statusMessage = $"Fire Danger: {gameState.CurrentWeather.GetFireDangerName()}";
             statusMessageTime = DateTime.Now;
         }
+        // X key to dump screen contents to file
+        else if (keyboard.IsKeyPressed(Keys.X))
+        {
+            DumpScreenToFile();
+            statusMessage = "Screen dumped to screen_dump.txt";
+            statusMessageTime = DateTime.Now;
+        }
         // Escape to show exit confirmation
         else if (keyboard.IsKeyPressed(Keys.Escape))
         {
@@ -325,6 +334,46 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
 
         Render();
     }
+}
+
+void DumpScreenToFile()
+{
+    if (mainConsole == null || gameState == null) return;
+
+    var sb = new System.Text.StringBuilder();
+    int viewportHeight = mainConsole.Height - 3; // Same as in Render()
+
+    sb.AppendLine($"=== Screen Dump ===");
+    sb.AppendLine($"Zoom Level: {gameState.ZoomLevel} ({gameState.GetZoomLevelName()})");
+    sb.AppendLine($"Render Scale: {gameState.GetRenderScale()}");
+    sb.AppendLine($"Camera: ({gameState.CameraPosition.X}, {gameState.CameraPosition.Y})");
+    sb.AppendLine($"Map Size: {gameState.MapWidth}x{gameState.MapHeight}");
+    sb.AppendLine();
+
+    // Dump the main viewport (excluding UI)
+    for (int y = 0; y < viewportHeight; y++)
+    {
+        for (int x = 0; x < mainConsole.Width; x++)
+        {
+            var glyph = mainConsole.GetGlyph(x, y);
+            sb.Append((char)glyph);
+        }
+        sb.AppendLine();
+    }
+
+    sb.AppendLine();
+    sb.AppendLine("=== UI Area ===");
+    for (int y = viewportHeight; y < mainConsole.Height; y++)
+    {
+        for (int x = 0; x < mainConsole.Width; x++)
+        {
+            var glyph = mainConsole.GetGlyph(x, y);
+            sb.Append((char)glyph);
+        }
+        sb.AppendLine();
+    }
+
+    File.WriteAllText("screen_dump.txt", sb.ToString());
 }
 
 void ShowScenarioDialog()
@@ -388,7 +437,13 @@ void HandleDialogResponse(string optionKey)
     {
         if (optionKey.ToUpper() == "ENTER")
         {
-            // Start game with scenario conditions
+            // Parse map size from scenario
+            var sizeParts = currentScenario.MapSize.Split('x');
+            int width = int.Parse(sizeParts[0]);
+            int height = int.Parse(sizeParts[1]);
+
+            // Create new game state with correct map size
+            gameState = new GameState(width, height);
             gameState.CurrentDialog = null;
             gameState.Money = currentScenario.StartMoney;
             gameState.Population = currentScenario.StartPopulation;
@@ -1033,12 +1088,14 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                 }
             }
 
-            // At far zoom (200ft and 400ft), ensure important farmstead structures are always visible
-            if (gameState.ZoomLevel <= -1)
+            // At zoomed-out levels, ensure important farmstead structures are always visible
+            // This applies whenever we're sampling (skipFactor > 1)
+            if (skipFactor > 1)
             {
                 // Search the sampling area for important structures
                 Tile? importantStructure = null;
                 int structurePriority = 0; // Higher = more important
+                HashSet<(int, int)> processedOrigins = new(); // Track which building origins we've already considered
 
                 for (int dy = 0; dy < skipFactor; dy++)
                 {
@@ -1054,12 +1111,46 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                             // Check if this is a farmstead structure (Grass with CropType)
                             if (checkTile.Type == TileType.Grass && checkTile.CropType != null)
                             {
-                                int priority = GetStructurePriority(checkTile.CropType);
+                                Tile tileToConsider;
+                                int originX, originY;
+
+                                // If this is part of a multi-tile building, find its origin
+                                if (checkTile.BuildingOffset.HasValue)
+                                {
+                                    originX = checkX - checkTile.BuildingOffset.Value.x;
+                                    originY = checkY - checkTile.BuildingOffset.Value.y;
+
+                                    // Skip if we've already processed this building's origin
+                                    if (processedOrigins.Contains((originX, originY)))
+                                        continue;
+
+                                    // Mark this origin as processed
+                                    processedOrigins.Add((originX, originY));
+
+                                    // Get the origin tile
+                                    if (originX >= 0 && originY >= 0 && originX < gameState.MapWidth && originY < gameState.MapHeight)
+                                    {
+                                        tileToConsider = gameState.Tiles[originX, originY];
+                                    }
+                                    else
+                                    {
+                                        continue; // Origin is out of bounds
+                                    }
+                                }
+                                else
+                                {
+                                    // Single-tile structure, use as-is
+                                    tileToConsider = checkTile;
+                                    originX = checkX;
+                                    originY = checkY;
+                                }
+
+                                int priority = GetStructurePriority(tileToConsider.CropType);
 
                                 // Keep the most important structure found
                                 if (priority > structurePriority)
                                 {
-                                    importantStructure = checkTile;
+                                    importantStructure = tileToConsider;
                                     structurePriority = priority;
                                 }
                             }

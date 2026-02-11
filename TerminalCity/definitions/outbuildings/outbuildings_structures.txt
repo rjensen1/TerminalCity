@@ -25,7 +25,7 @@ variant_of: shed
 size: 1x1
 description: Small storage shed for tools and equipment
 color: Brown
-background_color: SaddleBrown
+background_color: DarkGreen
 can_attach_to: house, barn
 
 # Zoom-level display patterns

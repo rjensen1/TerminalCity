@@ -187,11 +187,52 @@ public static class BuildingParser
         return buildings;
     }
 
+    private static string ConvertUnicodeToExtendedAscii(string pattern)
+    {
+        // Map Unicode box-drawing and special characters to their extended ASCII equivalents
+        // This ensures compatibility with fonts that only support codepage 437 (extended ASCII)
+        var result = pattern
+            .Replace('⌂', (char)127)  // House symbol: Unicode U+2302 → CP437 char 127
+            .Replace('▐', (char)222)  // Right half block: Unicode U+2590 → CP437 char 222
+            .Replace('▌', (char)221)  // Left half block: Unicode U+258C → CP437 char 221
+            .Replace('█', (char)219)  // Full block: Unicode U+2588 → CP437 char 219
+            .Replace('▄', (char)220)  // Lower half block: Unicode U+2584 → CP437 char 220
+            .Replace('▀', (char)223)  // Upper half block: Unicode U+2580 → CP437 char 223
+            .Replace('╗', (char)187)  // Box drawing double: ╗
+            .Replace('║', (char)186)  // Box drawing double: ║
+            .Replace('╝', (char)188)  // Box drawing double: ╝
+            .Replace('╚', (char)200)  // Box drawing double: ╚
+            .Replace('╔', (char)201)  // Box drawing double: ╔
+            .Replace('═', (char)205)  // Box drawing double: ═
+            .Replace('╩', (char)202)  // Box drawing double: ╩
+            .Replace('╦', (char)203)  // Box drawing double: ╦
+            .Replace('╠', (char)204)  // Box drawing double: ╠
+            .Replace('╣', (char)185)  // Box drawing double: ╣
+            .Replace('╬', (char)206)  // Box drawing double: ╬
+            .Replace('└', (char)192)  // Box drawing single: └
+            .Replace('┘', (char)217)  // Box drawing single: ┘
+            .Replace('┌', (char)218)  // Box drawing single: ┌
+            .Replace('┐', (char)191)  // Box drawing single: ┐
+            .Replace('├', (char)195)  // Box drawing single: ├
+            .Replace('┤', (char)180)  // Box drawing single: ┤
+            .Replace('┬', (char)194)  // Box drawing single: ┬
+            .Replace('┴', (char)193)  // Box drawing single: ┴
+            .Replace('┼', (char)197)  // Box drawing single: ┼
+            .Replace('─', (char)196)  // Box drawing single: ─
+            .Replace('│', (char)179); // Box drawing single: │
+
+        return result;
+    }
+
     private static void SavePattern(BuildingDefinition building, string zoom, List<string> lines)
     {
         if (lines.Count == 0) return;
 
         var pattern = string.Join("\n", lines);
+
+        // Convert Unicode characters to extended ASCII equivalents for font compatibility
+        pattern = ConvertUnicodeToExtendedAscii(pattern);
+
         var zoomPattern = new ZoomPattern { Pattern = pattern, Important = false };
 
         switch (zoom)

@@ -59,18 +59,20 @@ public class GameState
 
     /// <summary>
     /// Get the render scale multiplier for current zoom
+    /// NOTE: Tile array is stored at 25ft granularity (most detailed level).
+    /// This calculates how many tiles to consolidate per screen character.
     /// </summary>
     public double GetRenderScale()
     {
-        return ZoomLevel switch
-        {
-            -2 => 0.25,  // Show every 4th tile
-            -1 => 0.5,   // Show every 2nd tile
-            0 => 1.0,    // Normal 1:1
-            1 => 2.0,    // Each tile becomes 2x2
-            2 => 4.0,    // Each tile becomes 4x4
-            _ => 1.0
-        };
+        // Tile storage granularity is always 25ft
+        const int storageGranularity = 25;
+
+        // Get viewing scale (feet per screen character)
+        int viewingScale = GetTileScale();
+
+        // Calculate sampling ratio: viewingScale / storageGranularity
+        // E.g., at 100ft zoom: 100/25 = 4 tiles per screen char → scale = 1/4 = 0.25
+        return (double)storageGranularity / viewingScale;
     }
 
     // City data

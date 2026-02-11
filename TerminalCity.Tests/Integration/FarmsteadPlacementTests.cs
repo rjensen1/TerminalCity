@@ -49,23 +49,27 @@ public class FarmsteadPlacementTests
         // Farmhouse is at plot positions (0,1), (1,1), (0,2), (1,2)
         // Which translates to world positions (3,4), (4,4), (3,5), (4,5)
 
-        // Top row of farmhouse: ⌂╗
+        // Top row of farmhouse: ⌂╗ (chars 127, 187)
         var topLeft = GetTileAppearance(gameState.Tiles[3, 4], gameState);
-        Assert.Equal('⌂', topLeft.glyph);
+        Assert.Equal((char)127, topLeft.glyph);  // ⌂ converted to extended ASCII
         Assert.Equal(Color.White, topLeft.foreground);
+        Assert.Equal(Color.DarkGreen, topLeft.background);
 
         var topRight = GetTileAppearance(gameState.Tiles[4, 4], gameState);
-        Assert.Equal('╗', topRight.glyph);
+        Assert.Equal((char)187, topRight.glyph);  // ╗ converted to extended ASCII
         Assert.Equal(Color.White, topRight.foreground);
+        Assert.Equal(Color.DarkGreen, topRight.background);
 
-        // Bottom row of farmhouse: └╝
+        // Bottom row of farmhouse: └╝ (chars 192, 188)
         var bottomLeft = GetTileAppearance(gameState.Tiles[3, 5], gameState);
-        Assert.Equal('└', bottomLeft.glyph);
+        Assert.Equal((char)192, bottomLeft.glyph);  // └ converted to extended ASCII
         Assert.Equal(Color.White, bottomLeft.foreground);
+        Assert.Equal(Color.DarkGreen, bottomLeft.background);
 
         var bottomRight = GetTileAppearance(gameState.Tiles[4, 5], gameState);
-        Assert.Equal('╝', bottomRight.glyph);
+        Assert.Equal((char)188, bottomRight.glyph);  // ╝ converted to extended ASCII
         Assert.Equal(Color.White, bottomRight.foreground);
+        Assert.Equal(Color.DarkGreen, bottomRight.background);
     }
 
     [Fact]
@@ -165,9 +169,9 @@ public class FarmsteadPlacementTests
 
         // Assert: Shed at position (5, 4) - plot position (2, 1)
         var shed = GetTileAppearance(gameState.Tiles[5, 4], gameState);
-        Assert.Equal('▐', shed.glyph); // At 25ft zoom
+        Assert.Equal((char)222, shed.glyph); // ▐ converted to extended ASCII char 222
         Assert.Equal(Color.Brown, shed.foreground);
-        Assert.Equal(Color.SaddleBrown, shed.background);
+        Assert.Equal(Color.DarkGreen, shed.background);
     }
 
     [Fact]
