@@ -65,7 +65,7 @@ public static class MapGenerator
 
         // For small maps (debugging), always place a test farmstead at center
         // Since small maps may not have suitable plots with south roads
-        if (gameState.MapWidth <= 20 || gameState.MapHeight <= 20)
+        if (gameState.MapWidth <= 40 || gameState.MapHeight <= 40)
         {
             Console.WriteLine($"DEBUG: Small map detected ({gameState.MapWidth}x{gameState.MapHeight}), placing test farmstead at center");
             var testFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");

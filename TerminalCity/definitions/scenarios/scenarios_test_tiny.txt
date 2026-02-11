@@ -4,13 +4,13 @@ name: Test Tiny Map
 game_type: traditional
 
 [description]
-Tiny 10x10 map for debugging farmstead rendering
+30x30 map for debugging farmstead rendering at all zoom levels
 
 [starting_conditions]
 year: 1950
 population: 0
 money: 10000
-map_size: 10x10
+map_size: 30x30
 
 [terrain_generation]
 type: flat_farmland

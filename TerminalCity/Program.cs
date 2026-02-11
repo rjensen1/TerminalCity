@@ -1006,6 +1006,10 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
     int startX = gameState.CameraPosition.X - dataTilesWide / 2;
     int startY = gameState.CameraPosition.Y - dataTilesHigh / 2;
 
+    // Track which building origins have been rendered globally across all screen positions
+    // This prevents multi-tile buildings from appearing multiple times when they span sampling windows
+    HashSet<(int, int)> globalProcessedOrigins = new();
+
     for (int screenY = 0; screenY < viewportHeight; screenY++)
     {
         for (int screenX = 0; screenX < viewportWidth; screenX++)
@@ -1095,7 +1099,6 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                 // Search the sampling area for important structures
                 Tile? importantStructure = null;
                 int structurePriority = 0; // Higher = more important
-                HashSet<(int, int)> processedOrigins = new(); // Track which building origins we've already considered
 
                 for (int dy = 0; dy < skipFactor; dy++)
                 {
@@ -1120,12 +1123,12 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                                     originX = checkX - checkTile.BuildingOffset.Value.x;
                                     originY = checkY - checkTile.BuildingOffset.Value.y;
 
-                                    // Skip if we've already processed this building's origin
-                                    if (processedOrigins.Contains((originX, originY)))
+                                    // Skip if we've already rendered this building globally
+                                    if (globalProcessedOrigins.Contains((originX, originY)))
                                         continue;
 
-                                    // Mark this origin as processed
-                                    processedOrigins.Add((originX, originY));
+                                    // Mark this origin as processed globally
+                                    globalProcessedOrigins.Add((originX, originY));
 
                                     // Get the origin tile
                                     if (originX >= 0 && originY >= 0 && originX < gameState.MapWidth && originY < gameState.MapHeight)
@@ -1162,6 +1165,22 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
                 if (importantStructure != null)
                 {
                     tile = importantStructure;
+                }
+                else
+                {
+                    // Check if the sampled tile itself is part of an already-rendered building
+                    // If so, replace with grass to avoid duplicate rendering
+                    if (tile.Type == TileType.Grass && tile.CropType != null && tile.BuildingOffset.HasValue)
+                    {
+                        int tileOriginX = worldX - tile.BuildingOffset.Value.x;
+                        int tileOriginY = worldY - tile.BuildingOffset.Value.y;
+
+                        if (globalProcessedOrigins.Contains((tileOriginX, tileOriginY)))
+                        {
+                            // This tile is part of a building already rendered elsewhere - show grass instead
+                            tile = new Tile(TileType.Grass, null, null, "yard");
+                        }
+                    }
                 }
             }
 
