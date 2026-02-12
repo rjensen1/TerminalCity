@@ -28,3 +28,50 @@ legend:
 . = yard
 H = tiny_farmhouse
 S = shed
+
+[farmstead]
+id: farm_with_house
+name: Farm with Farmhouse
+size: 12x12
+description: Active farm field with farmhouse. House in corner, fields fill most of plot.
+map:
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FF...FFFFFFF
+FFHHSFFFFFFF
+FFHHSFFFFFFF
+FFFFFFFFFFFF
+
+legend:
+F = farm_field
+. = yard
+H = tiny_farmhouse
+S = shed
+
+[farmstead]
+id: farm_no_house
+name: Farm without Farmhouse
+size: 12x12
+description: Modern commercial farm field with no residence. Pure agricultural land.
+map:
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+FFFFFFFFFFFF
+
+legend:
+F = farm_field

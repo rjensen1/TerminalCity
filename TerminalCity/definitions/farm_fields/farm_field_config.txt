@@ -1,0 +1,22 @@
+# Farm Field Configuration
+# Defines size constraints for farm field plots
+#
+# HOW TO USE:
+# - min_size and max_size define the allowed dimensions for farm fields
+# - Can be simple integers: min_size: 8
+# - Or era-based arrays: min_size: [1700: 4, 1900: 8, 1950: 12, 2000: 20]
+# - Scenarios can override these values using same format
+
+[farm_field_sizing]
+# For now, using simple integers
+# Future: support era-based sizing like [1700: min: 4, max: 15, 1950: min: 10, max: 45, 2000: min: 20, max: 100]
+
+min_width: 8
+max_width: 25
+
+min_height: 8
+max_height: 25
+
+# Probability that a farm field will have a farmstead (house/barn)
+# Can be era-based in future: [1700: 0.8, 1950: 0.6, 2000: 0.2]
+farmstead_probability: 0.7

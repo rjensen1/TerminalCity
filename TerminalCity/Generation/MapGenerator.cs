@@ -63,23 +63,83 @@ public static class MapGenerator
         var farmPlots = gameState.Plots.Count(p => p.Type == PlotType.Farmland);
         Console.WriteLine($"DEBUG: Farm plots: {farmPlots}");
 
-        // For small maps (debugging), always place a test farmstead at center
-        // Since small maps may not have suitable plots with south roads
+        // For small maps (debugging), create a farm field with farmstead
         if (gameState.MapWidth <= 40 || gameState.MapHeight <= 40)
         {
-            Console.WriteLine($"DEBUG: Small map detected ({gameState.MapWidth}x{gameState.MapHeight}), placing test farmstead at center");
-            var testFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
-            var testTemplate = FarmsteadParser.LoadFromFile(testFarmsteadPath);
-            if (testTemplate != null)
+            Console.WriteLine($"DEBUG: Small map detected ({gameState.MapWidth}x{gameState.MapHeight}), creating test farm field");
+
+            // Load crop definitions
+            var cropsPath = Path.Combine("definitions", "crops", "crops.txt");
+            var crops = CropParser.LoadFromFile(cropsPath);
+
+            if (crops.Count > 0)
             {
-                int centerX = gameState.MapWidth / 2;
-                int centerY = gameState.MapHeight / 2;
-                PlaceFarmstead(gameState, testTemplate, centerX, centerY);
-                Console.WriteLine($"DEBUG: Placed test farmstead at map center ({centerX},{centerY})");
+                // Pick a random crop
+                var randomCrop = crops[random.Next(crops.Count)];
+                Console.WriteLine($"DEBUG: Selected crop: {randomCrop.Name} ({randomCrop.Id})");
+
+                // Create one large farm field filling most of the map (leave 2 tile border)
+                int fieldWidth = gameState.MapWidth - 4;
+                int fieldHeight = gameState.MapHeight - 4;
+                int fieldX = 2;
+                int fieldY = 2;
+
+                // Create a Plot for the farm field
+                var farmPlot = new Plot(
+                    id: "test_farm_field",
+                    bounds: new Rectangle(fieldX, fieldY, fieldWidth, fieldHeight),
+                    type: PlotType.Farmland,
+                    cropType: randomCrop.Id
+                );
+                gameState.Plots.Add(farmPlot);
+
+                // Fill the field area with the crop
+                for (int y = fieldY; y < fieldY + fieldHeight; y++)
+                {
+                    for (int x = fieldX; x < fieldX + fieldWidth; x++)
+                    {
+                        if (x < gameState.MapWidth && y < gameState.MapHeight)
+                        {
+                            gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, randomCrop.Id);
+                        }
+                    }
+                }
+
+                Console.WriteLine($"DEBUG: Created farm field plot at ({fieldX},{fieldY}) size {fieldWidth}x{fieldHeight} with crop {randomCrop.Id}");
+
+                // Now place a farmstead with house on the field
+                var testFarmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
+                var farmsteadTemplates = FarmsteadParser.LoadAllFromFile(testFarmsteadPath);
+                var farmWithHouse = farmsteadTemplates.FirstOrDefault(t => t.Id == "farm_with_house");
+
+                if (farmWithHouse != null)
+                {
+                    // Place farmstead in corner of field
+                    int farmsteadX = fieldX + 2;
+                    int farmsteadY = fieldY + 2;
+                    PlaceFarmstead(gameState, farmWithHouse, farmsteadX, farmsteadY);
+
+                    // Link ownership: farmstead owns the farm field
+                    farmPlot.OwnerId = farmWithHouse.Id;
+                    Console.WriteLine($"DEBUG: Placed farmstead '{farmWithHouse.Name}' at ({farmsteadX},{farmsteadY})");
+                    Console.WriteLine($"DEBUG: Farm field owned by farmstead '{farmWithHouse.Id}'");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG: Failed to load 'farm_with_house' template, falling back to default");
+                    // Fallback to first available template
+                    var anyTemplate = farmsteadTemplates.FirstOrDefault();
+                    if (anyTemplate != null)
+                    {
+                        int centerX = gameState.MapWidth / 2;
+                        int centerY = gameState.MapHeight / 2;
+                        PlaceFarmstead(gameState, anyTemplate, centerX, centerY);
+                    }
+                }
             }
             else
             {
-                Console.WriteLine($"DEBUG: Failed to load farmstead template");
+                Console.WriteLine($"DEBUG: No crops loaded, skipping farm field generation");
             }
         }
         // Otherwise, if no farmsteads were placed, add one for testing at map center

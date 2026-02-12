@@ -16,6 +16,7 @@ ScreenSurface? mainConsole = null;
 Scenario? currentScenario = null;
 List<BuildingDefinition> buildingDefinitions = new();
 List<StructureDefinition> structureDefinitions = new();
+List<CropDefinition> cropDefinitions = new();
 string? statusMessage = null;
 DateTime? statusMessageTime = null;
 bool fontTestRandomMode = true; // Toggle between random and organized display
@@ -48,6 +49,10 @@ void Startup(object? sender, GameHost host)
     buildingDefinitions.AddRange(BuildingParser.LoadFromFile(residentialPath));
     buildingDefinitions.AddRange(BuildingParser.LoadFromFile(agriculturePath));
     structureDefinitions.AddRange(StructureParser.LoadFromFile(structuresPath));
+
+    // Load crop definitions
+    var cropsPath = Path.Combine("definitions", "crops", "crops.txt");
+    cropDefinitions.AddRange(CropParser.LoadFromFile(cropsPath));
 
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
@@ -1312,32 +1317,39 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
 
 (char glyph, Color foreground, Color background) GetFarmAppearance(string cropType, Season season)
 {
-    // Hardcoded crop appearances for now (can load from files later)
-    if (cropType == "fallow_plowed")
+    // Look up crop definition from loaded crops
+    var cropDef = cropDefinitions.FirstOrDefault(c => c.Id == cropType);
+    if (cropDef != null)
     {
-        return season switch
+        // Get pattern based on current zoom level
+        var pattern = GetCropPattern(cropDef);
+        if (pattern != null && pattern.Pattern.Length > 0)
         {
-            Season.Spring => ((char)240, Color.SaddleBrown, Color.Peru),
-            Season.Summer => ((char)240, Color.Brown, Color.Tan),
-            Season.Fall => ((char)240, Color.DarkGoldenrod, Color.Peru),
-            Season.Winter => ((char)240, Color.DarkSlateGray, Color.SlateGray),
-            _ => ((char)240, Color.SaddleBrown, Color.Peru)
-        };
-    }
-    else if (cropType == "fallow_unplowed")
-    {
-        return season switch
-        {
-            Season.Spring => ('.', Color.YellowGreen, Color.DarkOliveGreen),
-            Season.Summer => ('.', Color.GreenYellow, Color.Olive),
-            Season.Fall => ('.', Color.DarkKhaki, Color.DarkGoldenrod),
-            Season.Winter => ('.', Color.Tan, Color.SaddleBrown),
-            _ => ('.', Color.YellowGreen, Color.DarkOliveGreen)
-        };
+            char ch = pattern.Pattern[0];
+            return (ch, cropDef.Color, cropDef.BackgroundColor);
+        }
+
+        // Fallback if no pattern
+        return ('.', cropDef.Color, cropDef.BackgroundColor);
     }
 
-    // Fallback
+    // Fallback for unknown crop types
     return ((char)240, Color.SaddleBrown, Color.DarkKhaki);
+}
+
+ZoomPattern? GetCropPattern(CropDefinition def)
+{
+    if (gameState == null) return null;
+
+    return gameState.ZoomLevel switch
+    {
+        2 => def.Pattern25ft,   // 25ft zoom
+        1 => def.Pattern50ft,   // 50ft zoom
+        0 => def.Pattern100ft,  // 100ft zoom (default)
+        -1 => def.Pattern200ft, // 200ft zoom
+        -2 => def.Pattern400ft, // 400ft zoom
+        _ => def.Pattern100ft   // Default to 100ft
+    };
 }
 
 (char glyph, Color foreground, Color background) GetBoundaryAppearance(string boundaryType)
@@ -1379,6 +1391,8 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
         return ('.', Color.Green, Color.DarkGreen);
     if (structureType == "driveway")
         return ((char)176, Color.Tan, Color.SaddleBrown);
+    if (structureType == "farm_field")
+        return ((char)178, Color.Yellow, Color.DarkGoldenrod); // ▒ - farm field pattern
 
     // Try to find building definition (check by id)
     var buildingDef = buildingDefinitions.FirstOrDefault(b => b.Id == structureType);

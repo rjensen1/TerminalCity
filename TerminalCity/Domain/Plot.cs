@@ -11,9 +11,9 @@ public class Plot
     public Rectangle Bounds { get; set; }  // x, y, width, height
     public PlotType Type { get; set; }
     public string? CropType { get; set; }  // For farmland: "fallow_plowed", "wheat", etc.
+    public string? OwnerId { get; set; }  // ID of farmstead/building that owns this plot
 
     // Future properties:
-    // public string? OwnerId { get; set; }
     // public DateTime? PlantedDate { get; set; }
     // public int? YieldEstimate { get; set; }
 

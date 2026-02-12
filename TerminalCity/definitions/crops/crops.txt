@@ -1,0 +1,78 @@
+# Crop Definitions
+# Defines visual appearance of different crop types at various zoom levels
+#
+# HOW TO USE:
+# - Each crop has patterns for different zoom levels (25ft, 50ft, 100ft, 200ft, 400ft)
+# - Used to fill farm field plots
+# - Similar to building definitions but for agricultural land use
+
+[crop]
+id: fallow_plowed
+name: Fallow (Plowed)
+description: Empty plowed field, resting between crops. Rich brown soil visible.
+
+# Zoom-level patterns
+pattern_25ft: ≡
+pattern_50ft: ≡
+pattern_100ft: ≡
+pattern_200ft: ≡
+pattern_400ft: ≡
+
+color: SaddleBrown
+background_color: Peru
+
+[crop]
+id: fallow_unplowed
+name: Fallow (Unplowed)
+description: Resting field with stubble and weeds. Not currently worked.
+
+pattern_25ft: ≈
+pattern_50ft: ≈
+pattern_100ft: ≈
+pattern_200ft: ≈
+pattern_400ft: ≈
+
+color: Tan
+background_color: DarkGoldenrod
+
+[crop]
+id: tall_grass
+name: Tall Grass
+description: Unmaintained field overtaken by wild grass and weeds.
+
+pattern_25ft: ″
+pattern_50ft: ″
+pattern_100ft: ·
+pattern_200ft: ·
+pattern_400ft: .
+
+color: YellowGreen
+background_color: DarkGreen
+
+[crop]
+id: wheat
+name: Wheat
+description: Golden wheat ready for harvest.
+
+pattern_25ft: ┊
+pattern_50ft: ┊
+pattern_100ft: ░
+pattern_200ft: ░
+pattern_400ft: ▒
+
+color: Gold
+background_color: Goldenrod
+
+[crop]
+id: corn
+name: Corn
+description: Tall corn stalks in neat rows.
+
+pattern_25ft: ║
+pattern_50ft: ║
+pattern_100ft: ▓
+pattern_200ft: ▓
+pattern_400ft: █
+
+color: GreenYellow
+background_color: DarkGreen
