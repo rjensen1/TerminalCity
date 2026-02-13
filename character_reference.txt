@@ -184,41 +184,54 @@ Building density progression:
 ═══════════════════════════════════════════════════════════════════════════════
 IBM EXTENDED FONT - ADDITIONAL CHARACTERS (256-322+)
 Available when using fonts/IBM_ext.font - NOT in standard CP437
+NOTE: These may not display correctly in this text file - use Font Test Mode (F key)
 ═══════════════════════════════════════════════════════════════════════════════
 
 ADVANCED BOX DRAWING (256-268):
-These provide additional box drawing variations beyond standard CP437
-256-268: Advanced edges, corners, and intersections for complex UI elements
+256: ╞  (edge variant 1)
+257: ╟  (edge variant 2)
+258: ╡  (edge variant 3)
+259: ╢  (edge variant 4)
+260: ╤  (corner/T variant 1)
+261: ╥  (corner/T variant 2)
+262: ╧  (corner/T variant 3)
+263: ╨  (corner/T variant 4)
+264: ╪  (cross variant 1)
+265: ╫  (cross variant 2)
+266: ┼  (cross variant 3)
+267: ╬  (cross variant 4)
+268: ═  (special line variant)
 
 LINE VARIATIONS - HALF-HEIGHT SEGMENTS (269-294):
-269-294: Box drawing with half-height line segments
+269-294: Box drawing components with half-height line segments
+         (View in Font Test Mode - these are specialized glyphs)
          Useful for detailed borders and fine-grained UI construction
 
 PROGRESSIVE FILL PATTERNS (304-319):
 Bottom fill patterns (gradual fill from bottom):
-304: Bottom fill level 1 (lowest)
-305: Bottom fill level 2
-306: Bottom fill level 3
-307: Bottom fill level 4
-308: Bottom fill level 5
-309: Bottom fill level 6
-310: Bottom fill level 7
-311: Bottom fill level 8 (highest)
+304: ▁  (bottom fill 1/8 - lowest)
+305: ▂  (bottom fill 2/8)
+306: ▃  (bottom fill 3/8)
+307: ▄  (bottom fill 4/8 - half)
+308: ▅  (bottom fill 5/8)
+309: ▆  (bottom fill 6/8)
+310: ▇  (bottom fill 7/8)
+311: █  (bottom fill 8/8 - full)
 
 Left fill patterns (gradual fill from left):
-312: Left fill level 1
-313: Left fill level 2
-314: Left fill level 3
-315: Left fill level 4
-316: Left fill level 5
-317: Left fill level 6
-318: Left fill level 7
-319: Left fill level 8
+312: ▏  (left fill 1/8)
+313: ▎  (left fill 2/8)
+314: ▍  (left fill 3/8)
+315: ▌  (left fill 4/8 - half)
+316: ▋  (left fill 5/8)
+317: ▊  (left fill 6/8)
+318: ▉  (left fill 7/8)
+319: █  (left fill 8/8 - full)
 
 UI DIRECTIONAL ARROWS (320-322):
-320: ▲ Up arrow (confirmed as green/yellow triangle in testing)
-321: ▼ Down arrow
-322: ◄► Left/Right arrows (combined)
+320: ▲  (up arrow - confirmed as green/yellow triangle in testing)
+321: ▼  (down arrow)
+322: ◄► (left/right arrows combined)
 
 MIRROR PROPERTY:
 Many extended glyphs support mirroring:
