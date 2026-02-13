@@ -28,7 +28,13 @@ TimeSpan updateInterval = TimeSpan.FromSeconds(1.0); // Update once per second
 Builder
     .GetBuilder()
     .SetWindowSizeInCells(120, 40)
-    .ConfigureFonts(true)
+    .ConfigureFonts((fontConfig, gameHost) => {
+        // Use IBM Extended font (8x16 with 70+ additional glyphs beyond CP437)
+        fontConfig.UseCustomFont("fonts\\IBM_ext.font");
+
+        // Load alternative fonts (can switch via Game.Instance.Fonts if needed)
+        fontConfig.AddExtraFonts("fonts\\Cheepicus12.font");
+    })
     .UseDefaultConsole()
     .OnStart(Startup)
     .Run();
