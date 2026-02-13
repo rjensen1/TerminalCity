@@ -179,3 +179,102 @@ Building density progression:
 177: ░  (low-rise)
 178: ▒  (mid-rise)
 219: █  (high-rise/skyscraper)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+IBM EXTENDED FONT - ADDITIONAL CHARACTERS (256-322+)
+Available when using fonts/IBM_ext.font - NOT in standard CP437
+═══════════════════════════════════════════════════════════════════════════════
+
+ADVANCED BOX DRAWING (256-268):
+These provide additional box drawing variations beyond standard CP437
+256-268: Advanced edges, corners, and intersections for complex UI elements
+
+LINE VARIATIONS - HALF-HEIGHT SEGMENTS (269-294):
+269-294: Box drawing with half-height line segments
+         Useful for detailed borders and fine-grained UI construction
+
+PROGRESSIVE FILL PATTERNS (304-319):
+Bottom fill patterns (gradual fill from bottom):
+304: Bottom fill level 1 (lowest)
+305: Bottom fill level 2
+306: Bottom fill level 3
+307: Bottom fill level 4
+308: Bottom fill level 5
+309: Bottom fill level 6
+310: Bottom fill level 7
+311: Bottom fill level 8 (highest)
+
+Left fill patterns (gradual fill from left):
+312: Left fill level 1
+313: Left fill level 2
+314: Left fill level 3
+315: Left fill level 4
+316: Left fill level 5
+317: Left fill level 6
+318: Left fill level 7
+319: Left fill level 8
+
+UI DIRECTIONAL ARROWS (320-322):
+320: ▲ Up arrow (confirmed as green/yellow triangle in testing)
+321: ▼ Down arrow
+322: ◄► Left/Right arrows (combined)
+
+MIRROR PROPERTY:
+Many extended glyphs support mirroring:
+- Mirror 1: Horizontal flip
+- Mirror 2: Vertical flip
+- Mirror 3: Both horizontal and vertical flip
+This allows creating directional variants without separate character definitions
+
+
+USAGE EXAMPLES FOR EXTENDED CHARACTERS
+════════════════════════════════════════════════════════════════════════════════
+
+Building height indicators (using progressive fills):
+304-311: Show building height/density with bottom-fill progression
+
+UI Navigation:
+320: Up arrow for "scroll up" or "north" indicators
+321: Down arrow for "scroll down" or "south" indicators
+322: Left/right arrows for horizontal navigation
+
+Complex borders:
+256-294: Create sophisticated UI frames and panel borders
+
+Density/progress visualization:
+304-319: Visual progress bars, population density, resource levels
+
+
+TESTING EXTENDED CHARACTERS
+════════════════════════════════════════════════════════════════════════════════
+
+In-game Font Test Mode:
+1. Press F from title screen to enter Font Test Mode
+2. Press T to toggle between Random and Organized views
+3. In Organized view, scroll down to see characters 256+ with hex codes
+4. Note character codes for use in definition files
+
+Current test examples:
+- Center crosshair: Changed from '+' to (char)320 to verify extended font
+- Fence borders: Temporarily using ☺ to test character rendering
+
+To use extended characters in definition files:
+1. Find the character code in Font Test Mode (e.g., 320 for up arrow)
+2. In code, use (char)XXX where XXX is the character code
+3. Note: Definition file parsers need to map these if using text format
+
+
+FONT INFORMATION
+════════════════════════════════════════════════════════════════════════════════
+
+Current Font: IBM Extended 8x16 (IBM_ext)
+Location: TerminalCity/fonts/IBM_ext.font + IBM8x16_NoPadding_extended.png
+Characters: 256 CP437 standard + 70+ extended glyphs
+Size: 8x16 pixels per character
+
+Alternative Font: Cheepicus12
+Location: TerminalCity/fonts/Cheepicus12.font + Cheepicus_12x12.png
+Size: 12x12 pixels per character
+
+For more information on fonts, see FONTS.md
