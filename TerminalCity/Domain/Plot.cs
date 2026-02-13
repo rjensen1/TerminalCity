@@ -13,6 +13,10 @@ public class Plot
     public string? CropType { get; set; }  // For farmland: "fallow_plowed", "wheat", etc.
     public string? OwnerId { get; set; }  // ID of farmstead/building that owns this plot
 
+    // Border properties
+    public string? BorderType { get; set; }  // ID of border definition: "fence", "trees", etc.
+    public BorderSides BorderSides { get; set; } = BorderSides.None;  // Which sides have the border
+
     // Future properties:
     // public DateTime? PlantedDate { get; set; }
     // public int? YieldEstimate { get; set; }

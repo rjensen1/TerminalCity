@@ -78,11 +78,17 @@ public static class MapGenerator
                 var randomCrop = crops[random.Next(crops.Count)];
                 Console.WriteLine($"DEBUG: Selected crop: {randomCrop.Name} ({randomCrop.Id})");
 
-                // Create one large farm field filling most of the map (leave 2 tile border)
-                int fieldWidth = gameState.MapWidth - 4;
-                int fieldHeight = gameState.MapHeight - 4;
-                int fieldX = 2;
-                int fieldY = 2;
+                // Create one large farm field filling the entire map
+                int fieldWidth = gameState.MapWidth;
+                int fieldHeight = gameState.MapHeight;
+                int fieldX = 0;
+                int fieldY = 0;
+
+                // Load border definitions
+                Console.WriteLine($"DEBUG: About to load border definitions...");
+                var bordersPath = Path.Combine("definitions", "borders", "border_definitions.txt");
+                var borders = BorderParser.LoadFromFile(bordersPath);
+                Console.WriteLine($"DEBUG: Loaded {borders.Count} border definitions from {bordersPath}");
 
                 // Create a Plot for the farm field
                 var farmPlot = new Plot(
@@ -91,6 +97,21 @@ public static class MapGenerator
                     type: PlotType.Farmland,
                     cropType: randomCrop.Id
                 );
+
+                // Add random border on all sides
+                if (borders.Count > 0)
+                {
+                    var randomBorder = borders[random.Next(borders.Count)];
+                    farmPlot.BorderType = randomBorder.Id;
+                    farmPlot.BorderSides = BorderSides.All;
+                    Console.WriteLine($"DEBUG: Added border: {randomBorder.Name} ({randomBorder.Id}) on all sides");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG: WARNING - No borders loaded, borders.Count = 0");
+                }
+
+                Console.WriteLine($"DEBUG: Farm plot created - BorderType: {farmPlot.BorderType}, BorderSides: {farmPlot.BorderSides}, Bounds: {farmPlot.Bounds}");
                 gameState.Plots.Add(farmPlot);
 
                 // Fill the field area with the crop

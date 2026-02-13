@@ -1,0 +1,100 @@
+# Border Definitions
+# Defines visual appearance of plot borders at various zoom levels
+#
+# Border types for farms, estates, parks, etc.
+# - Some borders only visible at close zoom (fences)
+# - Others visible at all zooms (tree lines)
+# - Use null/empty pattern for invisible at that zoom
+
+[border]
+id: fence
+name: Split-rail Fence
+description: Rustic wooden fence marking property boundary. Only visible up close.
+
+# Directional patterns - horizontal for north/south, vertical for east/west
+pattern_25ft_north: ─
+pattern_25ft_south: ─
+pattern_25ft_east: │
+pattern_25ft_west: │
+
+pattern_50ft_north: ─
+pattern_50ft_south: ─
+pattern_50ft_east: │
+pattern_50ft_west: │
+
+pattern_100ft: ·
+pattern_200ft:
+pattern_400ft:
+
+color: SaddleBrown
+background_color: Transparent
+
+[border]
+id: trees
+name: Tree Line
+description: Row of trees marking property boundary. Visible at all zoom levels.
+
+pattern_25ft: ♠
+pattern_50ft: ♠
+pattern_100ft: ▲
+pattern_200ft: ·
+pattern_400ft: ·
+
+color: DarkGreen
+background_color: Green
+
+[border]
+id: dirt
+name: Dirt Path
+description: Worn dirt path along plot edge.
+
+pattern_25ft: ≈
+pattern_50ft: ≈
+pattern_100ft: -
+pattern_200ft: ·
+pattern_400ft:
+
+color: SaddleBrown
+background_color: Peru
+
+[border]
+id: tall_grass
+name: Tall Grass Border
+description: Wild grass and weeds along plot edge.
+
+pattern_25ft: ″
+pattern_50ft: ″
+pattern_100ft: ·
+pattern_200ft:
+pattern_400ft:
+
+color: YellowGreen
+background_color: DarkGreen
+
+[border]
+id: ditch
+name: Water-filled Ditch
+description: Drainage ditch with standing water.
+
+pattern_25ft: ≈
+pattern_50ft: ≈
+pattern_100ft: ~
+pattern_200ft: -
+pattern_400ft:
+
+color: DarkBlue
+background_color: Blue
+
+[border]
+id: stacked_stones
+name: Stacked Stone Wall
+description: Traditional dry-stacked stone wall. Visible at all zoom levels.
+
+pattern_25ft: ▓
+pattern_50ft: ▓
+pattern_100ft: #
+pattern_200ft: ·
+pattern_400ft: ·
+
+color: Gray
+background_color: DarkGray

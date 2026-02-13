@@ -17,6 +17,7 @@ Scenario? currentScenario = null;
 List<BuildingDefinition> buildingDefinitions = new();
 List<StructureDefinition> structureDefinitions = new();
 List<CropDefinition> cropDefinitions = new();
+List<BorderDefinition> borderDefinitions = new();
 string? statusMessage = null;
 DateTime? statusMessageTime = null;
 bool fontTestRandomMode = true; // Toggle between random and organized display
@@ -53,6 +54,11 @@ void Startup(object? sender, GameHost host)
     // Load crop definitions
     var cropsPath = Path.Combine("definitions", "crops", "crops.txt");
     cropDefinitions.AddRange(CropParser.LoadFromFile(cropsPath));
+
+    // Load border definitions
+    var bordersPath = Path.Combine("definitions", "borders", "border_definitions.txt");
+    borderDefinitions.AddRange(BorderParser.LoadFromFile(bordersPath));
+    System.Console.WriteLine($"BORDER DEBUG: Loaded {borderDefinitions.Count} border definitions");
 
     // Create main console
     mainConsole = new ScreenSurface(120, 40);
@@ -1243,8 +1249,14 @@ void RenderZoomedOut(int viewportWidth, int viewportHeight, double scale)
 
             var (glyph, foreground, background) = GetTileAppearance(tile);
 
+            // Check if this position is on a plot border
+            var borderAppearance = GetBorderAppearance(worldX, worldY);
+            if (borderAppearance.HasValue)
+            {
+                (glyph, foreground, background) = borderAppearance.Value;
+            }
             // Check for intersections and direction on roads
-            if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+            else if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
             {
                 // Check neighbors at the actual road position (may differ from sampled position)
                 bool hasNorth = actualRoadY > 0 && IsRoadTile(gameState.Tiles[actualRoadX, actualRoadY - 1].Type);
@@ -1441,6 +1453,94 @@ ZoomPattern? GetCropPattern(CropDefinition def)
     // Structures are typically 1x1, so just use the pattern directly
     char ch = pattern.Pattern.Length > 0 ? pattern.Pattern[0] : '.';
     return (ch, def.Color, def.BackgroundColor);
+}
+
+/// <summary>
+/// Check if a world position is on a plot border and return border appearance if applicable
+/// Returns null if position is not on a border
+/// </summary>
+(char glyph, Color foreground, Color background)? GetBorderAppearance(int worldX, int worldY)
+{
+    if (gameState == null) return null;
+
+    // Debug: Check plot finding (only log corners to reduce spam)
+    if ((worldX == 0 || worldX == 29) && (worldY == 0 || worldY == 29))
+    {
+        System.Console.WriteLine($"BORDER DEBUG: Total plots in gameState: {gameState.Plots.Count}");
+        foreach (var p in gameState.Plots)
+        {
+            System.Console.WriteLine($"  Plot '{p.Id}' - BorderType:{p.BorderType}, BorderSides:{p.BorderSides}, Bounds:{p.Bounds}");
+        }
+        var debugPlot = gameState.Plots.FirstOrDefault(p => p.Contains(worldX, worldY));
+        System.Console.WriteLine($"BORDER DEBUG: Corner ({worldX},{worldY}) - Plot found: {debugPlot != null}, Plot ID: {debugPlot?.Id}, BorderType: {debugPlot?.BorderType}, BorderSides: {debugPlot?.BorderSides}");
+    }
+
+    // Find which plot this position belongs to
+    // Prefer plots WITH borders if multiple plots overlap
+    var plot = gameState.Plots
+        .Where(p => p.Contains(worldX, worldY))
+        .OrderByDescending(p => p.BorderSides != BorderSides.None ? 1 : 0)
+        .ThenByDescending(p => !string.IsNullOrEmpty(p.BorderType) ? 1 : 0)
+        .FirstOrDefault();
+
+    if (plot == null || plot.BorderType == null || plot.BorderSides == BorderSides.None)
+        return null;
+
+    // Find border definition
+    var borderDef = borderDefinitions.FirstOrDefault(b => b.Id == plot.BorderType);
+    if (borderDef == null)
+    {
+        System.Console.WriteLine($"BORDER DEBUG: Border type '{plot.BorderType}' not found in definitions!");
+        return null;
+    }
+
+    // Check if position is on the edge of the plot
+    var bounds = plot.Bounds;
+    bool isNorthEdge = worldY == bounds.Y;
+    bool isSouthEdge = worldY == bounds.Y + bounds.Height - 1;
+    bool isWestEdge = worldX == bounds.X;
+    bool isEastEdge = worldX == bounds.X + bounds.Width - 1;
+
+    // Debug corners
+    if ((worldX == 0 || worldX == 29) && (worldY == 0 || worldY == 29))
+    {
+        System.Console.WriteLine($"BORDER DEBUG: Corner ({worldX},{worldY}) - North:{isNorthEdge} South:{isSouthEdge} West:{isWestEdge} East:{isEastEdge}");
+        System.Console.WriteLine($"BORDER DEBUG: Bounds: {bounds}");
+    }
+
+    // Determine which specific border side this position is on
+    BorderSides currentSide = BorderSides.None;
+    if (isNorthEdge && plot.BorderSides.HasFlag(BorderSides.North)) currentSide = BorderSides.North;
+    else if (isSouthEdge && plot.BorderSides.HasFlag(BorderSides.South)) currentSide = BorderSides.South;
+    else if (isWestEdge && plot.BorderSides.HasFlag(BorderSides.West)) currentSide = BorderSides.West;
+    else if (isEastEdge && plot.BorderSides.HasFlag(BorderSides.East)) currentSide = BorderSides.East;
+
+    if (currentSide == BorderSides.None)
+    {
+        if ((worldX == 0 || worldX == 29) && (worldY == 0 || worldY == 29))
+            System.Console.WriteLine($"BORDER DEBUG: Corner ({worldX},{worldY}) - currentSide=None");
+        return null;
+    }
+
+    // Get the appropriate pattern for current zoom level and side
+    var pattern = borderDef.GetPatternForZoom(gameState.ZoomLevel, currentSide);
+    if (pattern == null)
+    {
+        // Only log this once per frame to avoid spam
+        if (worldX == bounds.X && worldY == bounds.Y)
+            System.Console.WriteLine($"BORDER DEBUG: Border '{borderDef.Name}' has no pattern at zoom {gameState.ZoomLevel}");
+        return null; // Border invisible at this zoom
+    }
+
+    // Log first border render (top-left corner) to confirm it's working
+    if (worldX == bounds.X && worldY == bounds.Y)
+        System.Console.WriteLine($"BORDER DEBUG: Rendering border '{borderDef.Name}' character '{pattern.Value}' at ({worldX},{worldY}) zoom={gameState.ZoomLevel}");
+
+    // Log corners at all zooms
+    if ((worldX == 0 || worldX == 29) && (worldY == 0 || worldY == 29))
+        System.Console.WriteLine($"BORDER DEBUG RENDER: ({worldX},{worldY}) zoom={gameState.ZoomLevel} border='{borderDef.Name}' char='{pattern.Value}'");
+
+    return (pattern.Value, borderDef.Color, borderDef.BackgroundColor);
 }
 
 ZoomPattern? GetBuildingPattern(BuildingDefinition def)
