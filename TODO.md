@@ -396,11 +396,12 @@ day_50: harsh_winter_begins
 - Content file format design
 
 ### Next Up 📋
-1. Define building file format
-2. Implement BuildingParser (similar to roguelike)
-3. Create BuildingMenu UI
-4. Implement ghost building placement
-5. Test with sample buildings (ruins for rebuilder, zones for traditional)
+1. Investigate fence edge rendering issue (directional borders showing weird characters)
+2. Define building file format
+3. Implement BuildingParser (similar to roguelike)
+4. Create BuildingMenu UI
+5. Implement ghost building placement
+6. Test with sample buildings (ruins for rebuilder, zones for traditional)
 
 ### Future Enhancements 🔮
 
