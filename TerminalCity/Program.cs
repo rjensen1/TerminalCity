@@ -23,6 +23,7 @@ DateTime? statusMessageTime = null;
 bool fontTestRandomMode = true; // Toggle between random and organized display
 TimeSpan timeAccumulator = TimeSpan.Zero; // Accumulator for throttling updates
 TimeSpan updateInterval = TimeSpan.FromSeconds(1.0); // Update once per second
+bool needsRender = true; // Dirty flag - only render when something changed
 
 // Configure and start SadConsole
 Builder
@@ -99,16 +100,24 @@ void OnUpdate(IScreenObject console, TimeSpan delta)
         {
             timeAccumulator -= updateInterval;
             gameState.AdvanceTime();
+            needsRender = true; // Time changed, need to re-render
         }
 
-        // Always render every frame (camera movement, input response, etc.)
-        Render();
+        // Only render when something changed (dirty flag pattern)
+        if (needsRender)
+        {
+            Render();
+            needsRender = false;
+        }
     }
 }
 
 void OnKeyPressed(IScreenObject console, Keyboard keyboard)
 {
     if (gameState == null) return;
+
+    // Any keyboard input requires a re-render
+    needsRender = true;
 
     // Handle dialog input first (dialogs are modal and block other input)
     if (gameState.CurrentDialog != null)
@@ -770,8 +779,14 @@ void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
                 // All tiles (including roads at scale=1) fill the scaled area with their glyph
                 var (glyph, foreground, background) = GetTileAppearance(tile);
 
+                // Check if this position is on a plot border
+                var borderAppearance = GetBorderAppearance(worldX, worldY);
+                if (borderAppearance.HasValue)
+                {
+                    (glyph, foreground, background) = borderAppearance.Value;
+                }
                 // For roads at scale=1, detect direction and use appropriate glyph
-                if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+                else if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
                 {
                     bool hasNorth = worldY > 0 && IsRoadTile(gameState.Tiles[worldX, worldY - 1].Type);
                     bool hasSouth = worldY < gameState.MapHeight - 1 && IsRoadTile(gameState.Tiles[worldX, worldY + 1].Type);
@@ -1546,7 +1561,18 @@ ZoomPattern? GetCropPattern(CropDefinition def)
     if ((worldX == 0 || worldX == 29) && (worldY == 0 || worldY == 29))
         System.Console.WriteLine($"BORDER DEBUG RENDER: ({worldX},{worldY}) zoom={gameState.ZoomLevel} border='{borderDef.Name}' char='{pattern.Value}'");
 
-    return (pattern.Value, borderDef.Color, borderDef.BackgroundColor);
+    // Get zoom-specific background color, or use tile's background if "neighbor"
+    var borderBackground = borderDef.GetBackgroundColorForZoom(gameState.ZoomLevel);
+
+    // If background is null (meaning "neighbor"), use the underlying tile's background
+    if (borderBackground == null)
+    {
+        var tile = gameState.Tiles[worldX, worldY];
+        var (_, _, tileBackground) = GetTileAppearance(tile);
+        borderBackground = tileBackground;
+    }
+
+    return (pattern.Value, borderDef.Color, borderBackground.Value);
 }
 
 ZoomPattern? GetBuildingPattern(BuildingDefinition def)

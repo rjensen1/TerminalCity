@@ -16,32 +16,67 @@ pattern_25ft_north: ─
 pattern_25ft_south: ─
 pattern_25ft_east: │
 pattern_25ft_west: │
+important_25ft: true
 
 pattern_50ft_north: ─
 pattern_50ft_south: ─
 pattern_50ft_east: │
 pattern_50ft_west: │
+important_50ft: true
 
 pattern_100ft: ·
+important_100ft: false
+
+# Not visible at far zoom - not important
 pattern_200ft:
+important_200ft: false
+
 pattern_400ft:
+important_400ft: false
 
 color: SaddleBrown
-background_color: Transparent
+background_color: neighbor
 
 [border]
 id: trees
 name: Tree Line
-description: Row of trees marking property boundary. Visible at all zoom levels.
+description: Row of trees marking property boundary. Always visible at all zoom levels.
 
+# Close zoom - tree icons with brown background
 pattern_25ft: ♠
+background_25ft: SaddleBrown
+important_25ft: true
+
 pattern_50ft: ♠
-pattern_100ft: ▲
-pattern_200ft: ·
-pattern_400ft: ·
+background_50ft: SaddleBrown
+important_50ft: true
+
+# Medium zoom - half-fill blocks (directional) with neighbor background
+pattern_100ft_north: ▀
+pattern_100ft_south: ▄
+pattern_100ft_east: ▐
+pattern_100ft_west: ▌
+background_100ft: neighbor
+important_100ft: true
+
+# Far zoom - 2/8 progressive fills (directional) with neighbor background
+pattern_200ft_north: ▂
+pattern_200ft_south: ▂
+pattern_200ft_east: ▎
+pattern_200ft_west: ▎
+background_200ft: neighbor
+important_200ft: true
+
+# Very far zoom - 1/8 progressive fills (directional) with neighbor background
+pattern_400ft_north: ▁
+pattern_400ft_south: ▁
+pattern_400ft_east: ▏
+pattern_400ft_west: ▏
+background_400ft: neighbor
+important_400ft: true
 
 color: DarkGreen
-background_color: Green
+background_color: neighbor
 
 [border]
 id: dirt

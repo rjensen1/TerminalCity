@@ -22,6 +22,20 @@ public class BorderDefinition
     public Color Color { get; set; }
     public Color BackgroundColor { get; set; }
 
+    // Optional per-zoom-level background colors (null = use default BackgroundColor)
+    public Color? BackgroundColor25ft { get; set; }
+    public Color? BackgroundColor50ft { get; set; }
+    public Color? BackgroundColor100ft { get; set; }
+    public Color? BackgroundColor200ft { get; set; }
+    public Color? BackgroundColor400ft { get; set; }
+
+    // Importance flags - should this border always be visible at this zoom level?
+    public bool Important25ft { get; set; } = false;
+    public bool Important50ft { get; set; } = false;
+    public bool Important100ft { get; set; } = false;
+    public bool Important200ft { get; set; } = false;
+    public bool Important400ft { get; set; } = false;
+
     /// <summary>
     /// Get the appropriate character for this border at the specified zoom level and side
     /// </summary>
@@ -38,6 +52,44 @@ public class BorderDefinition
         };
 
         return patternSet?.GetPattern(side);
+    }
+
+    /// <summary>
+    /// Get background color for this zoom level
+    /// Returns null if "neighbor" color should be used
+    /// </summary>
+    public Color? GetBackgroundColorForZoom(int zoomLevel)
+    {
+        var zoomBackground = zoomLevel switch
+        {
+            2 => BackgroundColor25ft,   // 25ft
+            1 => BackgroundColor50ft,   // 50ft
+            0 => BackgroundColor100ft,  // 100ft
+            -1 => BackgroundColor200ft, // 200ft
+            -2 => BackgroundColor400ft, // 400ft
+            _ => null
+        };
+
+        // If zoom-specific background is set, use it
+        // Otherwise, return null to indicate "use neighbor"
+        return zoomBackground ?? (BackgroundColor == Color.Transparent ? null : BackgroundColor);
+    }
+
+    /// <summary>
+    /// Check if this border is marked important at the specified zoom level
+    /// Important borders are always visible even at far zoom
+    /// </summary>
+    public bool IsImportantAtZoom(int zoomLevel)
+    {
+        return zoomLevel switch
+        {
+            2 => Important25ft,   // 25ft
+            1 => Important50ft,   // 50ft
+            0 => Important100ft,  // 100ft
+            -1 => Important200ft, // 200ft
+            -2 => Important400ft, // 400ft
+            _ => false
+        };
     }
 }
 

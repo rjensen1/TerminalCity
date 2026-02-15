@@ -98,13 +98,20 @@ public static class MapGenerator
                     cropType: randomCrop.Id
                 );
 
-                // Add random border on all sides
+                // TEMPORARY: Hardcode trees border on all sides for testing
                 if (borders.Count > 0)
                 {
-                    var randomBorder = borders[random.Next(borders.Count)];
-                    farmPlot.BorderType = randomBorder.Id;
-                    farmPlot.BorderSides = BorderSides.All;
-                    Console.WriteLine($"DEBUG: Added border: {randomBorder.Name} ({randomBorder.Id}) on all sides");
+                    var treesBorder = borders.FirstOrDefault(b => b.Id == "trees");
+                    if (treesBorder != null)
+                    {
+                        farmPlot.BorderType = treesBorder.Id;
+                        farmPlot.BorderSides = BorderSides.All;
+                        Console.WriteLine($"DEBUG: Added border: {treesBorder.Name} ({treesBorder.Id}) on all sides");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG: WARNING - Trees border not found!");
+                    }
                 }
                 else
                 {

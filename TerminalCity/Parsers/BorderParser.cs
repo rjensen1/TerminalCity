@@ -170,6 +170,40 @@ public static class BorderParser
                         currentBorder.Pattern400ft ??= new BorderPatternSet();
                         currentBorder.Pattern400ft.West = ParsePattern(value);
                         break;
+
+                    // Per-zoom background colors (optional)
+                    case "background_25ft":
+                        currentBorder.BackgroundColor25ft = ParseColor(value);
+                        break;
+                    case "background_50ft":
+                        currentBorder.BackgroundColor50ft = ParseColor(value);
+                        break;
+                    case "background_100ft":
+                        currentBorder.BackgroundColor100ft = ParseColor(value);
+                        break;
+                    case "background_200ft":
+                        currentBorder.BackgroundColor200ft = ParseColor(value);
+                        break;
+                    case "background_400ft":
+                        currentBorder.BackgroundColor400ft = ParseColor(value);
+                        break;
+
+                    // Importance flags (optional)
+                    case "important_25ft":
+                        currentBorder.Important25ft = bool.Parse(value);
+                        break;
+                    case "important_50ft":
+                        currentBorder.Important50ft = bool.Parse(value);
+                        break;
+                    case "important_100ft":
+                        currentBorder.Important100ft = bool.Parse(value);
+                        break;
+                    case "important_200ft":
+                        currentBorder.Important200ft = bool.Parse(value);
+                        break;
+                    case "important_400ft":
+                        currentBorder.Important400ft = bool.Parse(value);
+                        break;
                 }
             }
         }
@@ -209,7 +243,28 @@ public static class BorderParser
             .Replace('-', (char)45)   // Dash/minus
             .Replace('|', (char)179)  // ASCII vertical bar → box drawing
             .Replace('│', (char)179)  // Unicode vertical line → box drawing
-            .Replace('─', (char)196); // Horizontal line
+            .Replace('─', (char)196)  // Horizontal line
+            // Half blocks (CP437 220-223)
+            .Replace('▄', (char)220)  // Lower half block
+            .Replace('▌', (char)221)  // Left half block
+            .Replace('▐', (char)222)  // Right half block
+            .Replace('▀', (char)223)  // Upper half block
+            // Progressive fills - bottom (Extended 304-311)
+            .Replace('▁', (char)304)  // Bottom fill 1/8
+            .Replace('▂', (char)305)  // Bottom fill 2/8
+            .Replace('▃', (char)306)  // Bottom fill 3/8
+            // Note: ▄ is char 220 (standard CP437), not 307
+            .Replace('▅', (char)308)  // Bottom fill 5/8
+            .Replace('▆', (char)309)  // Bottom fill 6/8
+            .Replace('▇', (char)310)  // Bottom fill 7/8
+            // Progressive fills - left (Extended 312-319)
+            .Replace('▏', (char)312)  // Left fill 1/8
+            .Replace('▎', (char)313)  // Left fill 2/8
+            .Replace('▍', (char)314)  // Left fill 3/8
+            // Note: ▌ is char 221 (standard CP437), not 315
+            .Replace('▋', (char)316)  // Left fill 5/8
+            .Replace('▊', (char)317)  // Left fill 6/8
+            .Replace('▉', (char)318); // Left fill 7/8
 
         return result;
     }
@@ -222,6 +277,7 @@ public static class BorderParser
             "white" => Color.White,
             "black" => Color.Black,
             "transparent" => Color.Transparent,
+            "neighbor" => Color.Transparent,  // Special: use underlying tile's background
             "red" => Color.Red,
             "darkred" => Color.DarkRed,
             "green" => Color.Green,
