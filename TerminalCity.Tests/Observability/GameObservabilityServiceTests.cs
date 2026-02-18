@@ -238,3 +238,51 @@ public class GameObservabilityServiceTests : IDisposable
             Directory.Delete(_tempDir, recursive: true);
     }
 }
+
+/// <summary>
+/// Integration tests for the embedded HTTP server.
+/// Each test starts a service on a dedicated port to avoid cross-test interference.
+/// </summary>
+public class GameObservabilityServiceHttpTests : IDisposable
+{
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+    private readonly HttpClient _http = new();
+
+    public GameObservabilityServiceHttpTests()
+    {
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    [Fact]
+    public async Task WhenPostCommand_WithUnknownKey_ShouldReturn400()
+    {
+        var service = new GameObservabilityService(_tempDir);
+        service.StartHttpServer(15210);
+        await Task.Delay(150); // wait for HttpListener thread to start
+
+        var body = new StringContent("{\"key\":\"UnknownKey123\"}", System.Text.Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync("http://localhost:15210/command", body);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task WhenPostCommand_WithKnownKey_ShouldReturn202()
+    {
+        var service = new GameObservabilityService(_tempDir);
+        service.StartHttpServer(15211);
+        await Task.Delay(150);
+
+        var body = new StringContent("{\"key\":\"Right\"}", System.Text.Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync("http://localhost:15211/command", body);
+
+        Assert.Equal(System.Net.HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+    public void Dispose()
+    {
+        _http.Dispose();
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, recursive: true);
+    }
+}

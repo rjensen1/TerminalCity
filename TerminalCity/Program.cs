@@ -208,36 +208,30 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
     {
         // Camera movement
         if (keyboard.IsKeyPressed(Keys.Up) || keyboard.IsKeyPressed(Keys.W))
-        {
-            gameState.MoveCamera(new Point(0, -1));
-        }
+            ApplyGameInput("Up");
         else if (keyboard.IsKeyPressed(Keys.Down) || keyboard.IsKeyPressed(Keys.S))
-        {
-            gameState.MoveCamera(new Point(0, 1));
-        }
+            ApplyGameInput("Down");
         else if (keyboard.IsKeyPressed(Keys.Left) || keyboard.IsKeyPressed(Keys.A))
-        {
-            gameState.MoveCamera(new Point(-1, 0));
-        }
+            ApplyGameInput("Left");
         else if (keyboard.IsKeyPressed(Keys.Right) || keyboard.IsKeyPressed(Keys.D))
-        {
-            gameState.MoveCamera(new Point(1, 0));
-        }
+            ApplyGameInput("Right");
         // Zoom controls
         else if (keyboard.IsKeyPressed(Keys.OemOpenBrackets)) // [
         {
-            if (gameState.ZoomLevel > -2)
+            var prev = gameState.ZoomLevel;
+            ApplyGameInput("OemOpenBrackets");
+            if (gameState.ZoomLevel != prev)
             {
-                gameState.ZoomLevel--;
                 statusMessage = $"Zoom: {gameState.GetZoomLevelName()} (1 tile = {gameState.GetTileScale()}ft)";
                 statusMessageTime = DateTime.Now;
             }
         }
         else if (keyboard.IsKeyPressed(Keys.OemCloseBrackets)) // ]
         {
-            if (gameState.ZoomLevel < 2)
+            var prev = gameState.ZoomLevel;
+            ApplyGameInput("OemCloseBrackets");
+            if (gameState.ZoomLevel != prev)
             {
-                gameState.ZoomLevel++;
                 statusMessage = $"Zoom: {gameState.GetZoomLevelName()} (1 tile = {gameState.GetTileScale()}ft)";
                 statusMessageTime = DateTime.Now;
             }
@@ -245,18 +239,20 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
         // Speed controls
         else if (keyboard.IsKeyPressed(Keys.OemPlus) || keyboard.IsKeyPressed(Keys.Add)) // + key
         {
-            if (gameState.GameSpeed < 4)
+            var prev = gameState.GameSpeed;
+            ApplyGameInput("OemPlus");
+            if (gameState.GameSpeed != prev)
             {
-                gameState.GameSpeed++;
                 statusMessage = gameState.GameSpeed == 0 ? "PAUSED" : $"Speed: {gameState.GameSpeed}";
                 statusMessageTime = DateTime.Now;
             }
         }
         else if (keyboard.IsKeyPressed(Keys.OemMinus) || keyboard.IsKeyPressed(Keys.Subtract)) // - key
         {
-            if (gameState.GameSpeed > 0)
+            var prev = gameState.GameSpeed;
+            ApplyGameInput("OemMinus");
+            if (gameState.GameSpeed != prev)
             {
-                gameState.GameSpeed--;
                 statusMessage = gameState.GameSpeed == 0 ? "PAUSED" : $"Speed: {gameState.GameSpeed}";
                 statusMessageTime = DateTime.Now;
             }
@@ -264,7 +260,7 @@ void OnKeyPressed(IScreenObject console, Keyboard keyboard)
         // Time of day cycling (T key)
         else if (keyboard.IsKeyPressed(Keys.T))
         {
-            gameState.CycleTimeOfDay();
+            ApplyGameInput("T");
             statusMessage = $"Time of Day: {gameState.GetTimeOfDayName()}";
             statusMessageTime = DateTime.Now;
         }
@@ -412,16 +408,24 @@ void DumpScreenToFile()
     File.WriteAllText("screen_dump.txt", sb.ToString());
 }
 
-void ApplyObservabilityCommand(GameCommand cmd)
+/// <summary>
+/// Applies a single named game input action. Shared by keyboard handler and REST command path.
+/// Key names match .NET's Keys enum and the KnownKeys set in GameObservabilityService.
+/// </summary>
+void ApplyGameInput(string key)
 {
     if (gameState == null) return;
 
-    switch (cmd.Key)
+    switch (key)
     {
-        case "Up":    gameState.MoveCamera(new Point(0, -1)); break;
-        case "Down":  gameState.MoveCamera(new Point(0, 1));  break;
-        case "Left":  gameState.MoveCamera(new Point(-1, 0)); break;
-        case "Right": gameState.MoveCamera(new Point(1, 0));  break;
+        case "Up":
+        case "W":    gameState.MoveCamera(new Point(0, -1)); break;
+        case "Down":
+        case "S":    gameState.MoveCamera(new Point(0, 1));  break;
+        case "Left":
+        case "A":    gameState.MoveCamera(new Point(-1, 0)); break;
+        case "Right":
+        case "D":    gameState.MoveCamera(new Point(1, 0));  break;
 
         case "OemOpenBrackets":
             if (gameState.ZoomLevel > -2) gameState.ZoomLevel--;
@@ -443,7 +447,11 @@ void ApplyObservabilityCommand(GameCommand cmd)
             gameState.CycleTimeOfDay();
             break;
     }
+}
 
+void ApplyObservabilityCommand(GameCommand cmd)
+{
+    ApplyGameInput(cmd.Key);
     needsRender = true;
 }
 

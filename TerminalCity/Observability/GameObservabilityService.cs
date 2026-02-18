@@ -22,6 +22,20 @@ public class GameObservabilityService
     private volatile string _stateSnapshot = "{}";
     private volatile string _screenSnapshot = "";
 
+    /// <summary>
+    /// Keys accepted by POST /command. Unknown keys are rejected with 400.
+    /// Names match .NET's Keys enum values (same as <c>ApplyGameInput</c> in Program.cs).
+    /// </summary>
+    private static readonly HashSet<string> KnownKeys = new(StringComparer.Ordinal)
+    {
+        "Up", "Down", "Left", "Right",
+        "W", "A", "S", "D",           // camera aliases
+        "OemOpenBrackets", "OemCloseBrackets",
+        "OemPlus", "Add",
+        "OemMinus", "Subtract",
+        "T",
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -174,7 +188,7 @@ public class GameObservabilityService
                 var cmd = JsonSerializer.Deserialize<GameCommand>(body,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                if (cmd == null || string.IsNullOrEmpty(cmd.Key))
+                if (cmd == null || string.IsNullOrEmpty(cmd.Key) || !KnownKeys.Contains(cmd.Key))
                 {
                     response.StatusCode = 400;
                 }
