@@ -4,6 +4,7 @@ using SadConsole.Input;
 using SadRogue.Primitives;
 using TerminalCity.Domain;
 using TerminalCity.Generation;
+using TerminalCity.Observability;
 using TerminalCity.Parsers;
 using TerminalCity.Rendering;
 using TerminalCity.UI;
@@ -13,6 +14,7 @@ Settings.WindowTitle = "TerminalCity - ASCII City Builder";
 // Game state
 GameState? gameState = null;
 ScreenSurface? mainConsole = null;
+GameObservabilityService? observability = null;
 Scenario? currentScenario = null;
 List<BuildingDefinition> buildingDefinitions = new();
 List<StructureDefinition> structureDefinitions = new();
@@ -44,6 +46,10 @@ void Startup(object? sender, GameHost host)
 {
     // Initialize game state in title screen mode
     gameState = new GameState();
+
+    // Observability: file dumps + REST API (port 5200)
+    observability = new GameObservabilityService();
+    observability.StartHttpServer(port: 5200);
 
     // Load scenario
     var scenarioPath = Path.Combine("definitions", "scenarios", "scenarios_test_tiny.txt");
@@ -93,6 +99,10 @@ void OnUpdate(IScreenObject console, TimeSpan delta)
     // Only update when playing
     if (gameState.CurrentMode == GameMode.Playing)
     {
+        // Drain any commands injected via REST API
+        foreach (var cmd in observability?.DrainCommands() ?? [])
+            ApplyObservabilityCommand(cmd);
+
         // Accumulate time and only update at fixed intervals
         timeAccumulator += delta;
 
@@ -400,6 +410,41 @@ void DumpScreenToFile()
     }
 
     File.WriteAllText("screen_dump.txt", sb.ToString());
+}
+
+void ApplyObservabilityCommand(GameCommand cmd)
+{
+    if (gameState == null) return;
+
+    switch (cmd.Key)
+    {
+        case "Up":    gameState.MoveCamera(new Point(0, -1)); break;
+        case "Down":  gameState.MoveCamera(new Point(0, 1));  break;
+        case "Left":  gameState.MoveCamera(new Point(-1, 0)); break;
+        case "Right": gameState.MoveCamera(new Point(1, 0));  break;
+
+        case "OemOpenBrackets":
+            if (gameState.ZoomLevel > -2) gameState.ZoomLevel--;
+            break;
+        case "OemCloseBrackets":
+            if (gameState.ZoomLevel < 2) gameState.ZoomLevel++;
+            break;
+
+        case "OemPlus":
+        case "Add":
+            if (gameState.GameSpeed < 4) gameState.GameSpeed++;
+            break;
+        case "OemMinus":
+        case "Subtract":
+            if (gameState.GameSpeed > 0) gameState.GameSpeed--;
+            break;
+
+        case "T":
+            gameState.CycleTimeOfDay();
+            break;
+    }
+
+    needsRender = true;
 }
 
 void ShowScenarioDialog()
@@ -722,6 +767,9 @@ void Render()
     {
         gameState.CurrentDialog.Render(mainConsole);
     }
+
+    // Write observability dumps after every render
+    observability?.UpdateDumps(mainConsole, gameState);
 }
 
 void RenderZoomedIn(int viewportWidth, int viewportHeight, int scale)
