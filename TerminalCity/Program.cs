@@ -60,8 +60,10 @@ void Startup(object? sender, GameHost host)
     var agriculturePath = Path.Combine("definitions", "buildings", "buildings_agriculture.txt");
     var structuresPath = Path.Combine("definitions", "outbuildings", "outbuildings_structures.txt");
 
+    var civicPath = Path.Combine("definitions", "buildings", "buildings_civic.txt");
     buildingDefinitions.AddRange(BuildingParser.LoadFromFile(residentialPath));
     buildingDefinitions.AddRange(BuildingParser.LoadFromFile(agriculturePath));
+    buildingDefinitions.AddRange(BuildingParser.LoadFromFile(civicPath));
     structureDefinitions.AddRange(StructureParser.LoadFromFile(structuresPath));
 
     // Load crop definitions
@@ -529,7 +531,7 @@ void HandleDialogResponse(string optionKey)
             gameState.CurrentDate = new DateTime(currentScenario.StartYear, 1, 1);
 
             // Generate initial map from scenario
-            MapGenerator.GenerateFromScenario(gameState, currentScenario);
+            MapGenerator.GenerateFromScenario(gameState, currentScenario, buildingDefinitions);
 
             // Set camera position based on scenario
             if (currentScenario.CameraStartPosition == "center")
@@ -1482,13 +1484,6 @@ ZoomPattern? GetCropPattern(CropDefinition def)
         return ((char)176, Color.Tan, Color.SaddleBrown);
     if (structureType == "farm_field")
         return ((char)178, Color.Yellow, Color.DarkGoldenrod); // ▒ - farm field pattern
-
-    // Pre-placed scenario buildings (stub rendering — TODO: wire to building definitions)
-    // TODO (implementer): replace with proper BuildingDefinition lookup once definition files exist
-    if (structureType == "school")
-        return ('S', Color.White, Color.DarkBlue);
-    if (structureType == "cemetery")
-        return ('+', Color.LightGray, Color.DarkGray);
 
     // Try to find building definition (check by id)
     var buildingDef = buildingDefinitions.FirstOrDefault(b => b.Id == structureType);

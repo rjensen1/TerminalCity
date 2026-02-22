@@ -1,0 +1,83 @@
+# Civic Buildings
+# Public/community buildings not tied to farming or residential use.
+# These are typically scenario-placed (not player-buildable in early eras).
+#
+# HOW TO USE:
+# - Placed via [placed_buildings] section in scenario files
+# - unlocked_by_default: false means players cannot build these directly
+# - era_available / era_obsolete control which scenarios they appear in
+#
+
+[building]
+id: school
+name: One-Room Schoolhouse
+type: Civic
+description: A single-room school serving the township's children. Common fixture at rural intersections before consolidated districts absorbed them.
+width: 2
+height: 2
+cost: 0
+maintenance: 0
+color: White
+background_color: DarkBlue
+unlocked_by_default: false
+era_available: 1850
+era_obsolete: 1960
+
+# 25ft zoom - 2x2 footprint
+pattern_25ft:
+▣▣
+▣▣
+
+# 50ft zoom - single char, civic buildings stand out
+pattern_50ft: ▣
+important_50ft: true
+
+# 100ft zoom - default rendering
+pattern_100ft: ▣
+important_100ft: true
+
+# 200ft zoom - still visible, civic landmark
+pattern_200ft: ▣
+important_200ft: true
+
+# 400ft zoom - may not show at low density
+pattern_400ft: ▣
+important_400ft: false
+
+[building]
+id: cemetery
+name: Rural Cemetery
+type: Civic
+description: A township cemetery, often predating living memory. The oldest stones are hard to read. These plots tend to stay whatever else changes around them.
+width: 4
+height: 4
+cost: 0
+maintenance: 0
+color: DarkGray
+background_color: Black
+unlocked_by_default: false
+era_available: 1840
+era_obsolete: 9999
+
+# 25ft zoom - 4x4 footprint, cross pattern
+pattern_25ft:
+╬╬╬╬
+╬╬╬╬
+╬╬╬╬
+╬╬╬╬
+
+# 50ft zoom - single char
+pattern_50ft: ╬
+important_50ft: true
+
+# 100ft zoom - default rendering
+pattern_100ft: ╬
+important_100ft: true
+
+# 200ft zoom - cemeteries persist visually
+pattern_200ft: ╬
+important_200ft: true
+
+# 400ft zoom
+pattern_400ft: ╬
+important_400ft: false

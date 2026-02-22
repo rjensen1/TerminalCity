@@ -12,7 +12,7 @@ public static class MapGenerator
     /// <summary>
     /// Generate a map from a scenario definition
     /// </summary>
-    public static void GenerateFromScenario(GameState gameState, Scenario scenario)
+    public static void GenerateFromScenario(GameState gameState, Scenario scenario, List<BuildingDefinition>? buildingDefinitions = null)
     {
         var random = new Random();
 
@@ -193,7 +193,7 @@ public static class MapGenerator
         // Step 3.7: Place explicitly specified buildings (school, cemetery, etc.)
         if (scenario.PlacedBuildings.Count > 0)
         {
-            PlaceSpecifiedBuildings(gameState, scenario, random);
+            PlaceSpecifiedBuildings(gameState, scenario, random, buildingDefinitions);
         }
 
         // Step 4: Add trees/vegetation
@@ -618,14 +618,12 @@ public static class MapGenerator
 
     /// <summary>
     /// Places explicitly specified buildings from the scenario's [placed_buildings] section.
-    /// TODO (implementer): Add actual tile placement for each building type.
-    ///   Currently resolves position from the placement hint and marks the tile with a
-    ///   structure CropType string so rendering can display it.
-    ///   Supported building types to implement: "school", "cemetery"
-    ///   Supported placement hints: "near_main_intersection", "edge_north", "edge_south",
-    ///     "edge_east", "edge_west", "x,y" (exact coordinates)
+    /// Marks all tiles in the building's footprint with the building type string (in CropType)
+    /// and a BuildingOffset so the renderer can pick per-tile pattern characters at close zoom.
+    /// Falls back to single-tile if no building definition is found.
     /// </summary>
-    private static void PlaceSpecifiedBuildings(GameState gameState, Scenario scenario, Random random)
+    private static void PlaceSpecifiedBuildings(GameState gameState, Scenario scenario, Random random,
+        List<BuildingDefinition>? buildingDefinitions)
     {
         int centerX = gameState.MapWidth / 2;
         int centerY = gameState.MapHeight / 2;
@@ -640,11 +638,25 @@ public static class MapGenerator
                 continue;
             }
 
-            // TODO (implementer): Replace this stub with actual multi-tile building placement
-            // once building definitions exist for school and cemetery.
-            // For now, mark a single tile so the scenario loads and renders something visible.
-            gameState.Tiles[pos.X, pos.Y] = new Tile(TileType.Grass, null, null, spec.BuildingType);
-            Console.WriteLine($"DEBUG: Placed {spec.BuildingType} at ({pos.X},{pos.Y}) [stub — single tile]");
+            var def = buildingDefinitions?.FirstOrDefault(b => b.Id == spec.BuildingType);
+            int width = def?.Width ?? 1;
+            int height = def?.Height ?? 1;
+
+            // Clamp footprint to map bounds
+            int maxX = Math.Min(pos.X + width, gameState.MapWidth);
+            int maxY = Math.Min(pos.Y + height, gameState.MapHeight);
+
+            for (int tileX = pos.X; tileX < maxX; tileX++)
+            {
+                for (int tileY = pos.Y; tileY < maxY; tileY++)
+                {
+                    int offsetX = tileX - pos.X;
+                    int offsetY = tileY - pos.Y;
+                    gameState.Tiles[tileX, tileY] = new Tile(TileType.Grass, null, null, spec.BuildingType, (offsetX, offsetY));
+                }
+            }
+
+            Console.WriteLine($"DEBUG: Placed {spec.BuildingType} at ({pos.X},{pos.Y}) [{width}x{height} tiles]");
         }
     }
 

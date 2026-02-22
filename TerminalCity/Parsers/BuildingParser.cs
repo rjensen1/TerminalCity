@@ -193,6 +193,7 @@ public static class BuildingParser
         // This ensures compatibility with fonts that only support codepage 437 (extended ASCII)
         var result = pattern
             .Replace('⌂', (char)127)  // House symbol: Unicode U+2302 → CP437 char 127
+            .Replace('▣', (char)254)  // White square with fill: Unicode U+25A3 → CP437 char 254 (■)
             .Replace('▐', (char)222)  // Right half block: Unicode U+2590 → CP437 char 222
             .Replace('▌', (char)221)  // Left half block: Unicode U+258C → CP437 char 221
             .Replace('█', (char)219)  // Full block: Unicode U+2588 → CP437 char 219
