@@ -143,15 +143,17 @@ public static class MapGenerator
 
                 if (farmWithHouse != null)
                 {
-                    // Place farmstead in corner of field
-                    int farmsteadX = fieldX + 2;
-                    int farmsteadY = fieldY + 2;
-                    PlaceFarmstead(gameState, farmWithHouse, farmsteadX, farmsteadY);
-
-                    // Link ownership: farmstead owns the farm field
-                    farmPlot.OwnerId = farmWithHouse.Id;
-                    Console.WriteLine($"DEBUG: Placed farmstead '{farmWithHouse.Name}' at ({farmsteadX},{farmsteadY})");
-                    Console.WriteLine($"DEBUG: Farm field owned by farmstead '{farmWithHouse.Id}'");
+                    bool placed = TryPlaceFarmsteadAtRoadEdge(gameState, farmPlot, farmWithHouse, random);
+                    if (placed)
+                    {
+                        farmPlot.OwnerId = farmWithHouse.Id;
+                        Console.WriteLine($"DEBUG: Placed farmstead '{farmWithHouse.Name}' via TryPlaceFarmsteadAtRoadEdge");
+                        Console.WriteLine($"DEBUG: Farm field owned by farmstead '{farmWithHouse.Id}'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG: No road edge found for test farm plot — skipping farmstead (no road = no farmhouse)");
+                    }
                 }
                 else
                 {
@@ -685,9 +687,69 @@ public static class MapGenerator
         };
     }
 
-    private static void PlaceFarmstead(GameState gameState, FarmsteadTemplate template, int startX, int startY)
+    /// <summary>
+    /// Checks the south and north edges of a plot for an adjacent road and places
+    /// the farmstead there. South edge → normal orientation; north edge → flipY so
+    /// the farmhouse front faces the road.
+    /// Returns true if a farmstead was placed.
+    /// </summary>
+    private static bool TryPlaceFarmsteadAtRoadEdge(
+        GameState gameState, Plot plot, FarmsteadTemplate template, Random random)
     {
-        Console.WriteLine($"DEBUG: PlaceFarmstead called at ({startX},{startY}) with template {template.Width}x{template.Height}");
+        Console.WriteLine($"DEBUG: Checking plot at ({plot.Bounds.X},{plot.Bounds.Y}) size {plot.Bounds.Width}x{plot.Bounds.Height}");
+
+        if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height)
+        {
+            Console.WriteLine($"DEBUG: Plot too small: {plot.Bounds.Width}x{plot.Bounds.Height}");
+            return false;
+        }
+
+        int farmsteadX = plot.Bounds.X + (plot.Bounds.Width - template.Width) / 2; // Centered horizontally
+
+        // Check south edge first
+        int southY = plot.Bounds.Y + plot.Bounds.Height;
+        if (southY < gameState.MapHeight && HasRoadAtRow(gameState, plot, southY))
+        {
+            int farmsteadY = plot.Bounds.Y + plot.Bounds.Height - template.Height;
+            Console.WriteLine($"DEBUG: Road on south — placing farmstead at ({farmsteadX},{farmsteadY})");
+            PlaceFarmstead(gameState, template, farmsteadX, farmsteadY, flipY: false);
+            return true;
+        }
+
+        // Check north edge
+        int northY = plot.Bounds.Y - 1;
+        if (northY >= 0 && HasRoadAtRow(gameState, plot, northY))
+        {
+            int farmsteadY = plot.Bounds.Y;
+            Console.WriteLine($"DEBUG: Road on north — placing farmstead at ({farmsteadX},{farmsteadY}) (flipY)");
+            PlaceFarmstead(gameState, template, farmsteadX, farmsteadY, flipY: true);
+            return true;
+        }
+
+        // East/west roads: skip for now (see GitHub issue for orientation support)
+        Console.WriteLine($"DEBUG: Plot at ({plot.Bounds.X},{plot.Bounds.Y}) has no road on south or north");
+        return false;
+    }
+
+    /// <summary>Returns true if any tile in <paramref name="roadY"/> across the plot's x-range is a road.</summary>
+    private static bool HasRoadAtRow(GameState gameState, Plot plot, int roadY)
+    {
+        for (int x = plot.Bounds.X; x < plot.Bounds.X + plot.Bounds.Width; x++)
+        {
+            if (x < gameState.MapWidth)
+            {
+                var tile = gameState.Tiles[x, roadY];
+                if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static void PlaceFarmstead(
+        GameState gameState, FarmsteadTemplate template, int startX, int startY, bool flipY = false)
+    {
+        Console.WriteLine($"DEBUG: PlaceFarmstead called at ({startX},{startY}) with template {template.Width}x{template.Height} flipY={flipY}");
         Console.WriteLine($"DEBUG: Template has {template.MapRows.Count} map rows");
 
         // Track the first occurrence of multi-tile buildings to calculate offsets
@@ -723,7 +785,7 @@ public static class MapGenerator
             for (int x = 0; x < template.Width; x++)
             {
                 int worldX = startX + x;
-                int worldY = startY + y;
+                int worldY = flipY ? startY + (template.Height - 1 - y) : startY + y;
 
                 if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
                     continue;
