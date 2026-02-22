@@ -221,10 +221,10 @@ public class FarmsteadPlacementTests
         Assert.Equal(TileType.Farm, gameState.Tiles[3, 6].Type);
     }
 
-    // Helper: Place a farmstead plot (mimics MapGenerator.PlaceFarmstead)
-    private void PlaceFarmsteadPlot(GameState gameState, FarmsteadTemplate template, int startX, int startY)
+    // Helper: Place a farmstead plot (mirrors MapGenerator.PlaceFarmstead, including flipY)
+    private void PlaceFarmsteadPlot(GameState gameState, FarmsteadTemplate template, int startX, int startY, bool flipY = false)
     {
-        // Track building origins for offset calculation
+        // Track building origins for offset calculation (template-space, unaffected by flipY)
         Dictionary<string, (int minX, int minY)> buildingOrigins = new();
 
         // First pass: find top-left corner of each multi-tile building
@@ -257,7 +257,7 @@ public class FarmsteadPlacementTests
             for (int x = 0; x < template.Width; x++)
             {
                 int worldX = startX + x;
-                int worldY = startY + y;
+                int worldY = flipY ? startY + (template.Height - 1 - y) : startY + y;
 
                 if (worldX < 0 || worldX >= gameState.MapWidth || worldY < 0 || worldY >= gameState.MapHeight)
                     continue;
@@ -281,6 +281,103 @@ public class FarmsteadPlacementTests
                 }
             }
         }
+    }
+
+    // --- North-edge (flipY) placement tests ---
+
+    [Fact]
+    public void WhenFlipYTrue_ShouldPlaceTemplateLastRowAtTop()
+    {
+        // With flipY the template is rendered bottom-up so the farmhouse's bottom row
+        // (template row Height-1) appears at worldY=startY (closest to the north road).
+        var gameState = new GameState(10, 10);
+        gameState.ZoomLevel = 2;
+
+        for (int x = 0; x < 10; x++)
+            for (int y = 0; y < 10; y++)
+                gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, "fallow_plowed");
+
+        // Place at (3,3) with flipY — template Height=3
+        PlaceFarmsteadPlot(gameState, _tinyFarmhouse, 3, 3, flipY: true);
+
+        // Template row 2 ("└╝.") maps to worldY = 3 + (3-1-2) = 3 (top of placed area)
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[3, 3].CropType); // └
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[4, 3].CropType); // ╝
+        Assert.Equal("yard",           gameState.Tiles[5, 3].CropType); // .
+
+        // Template row 1 ("⌂╗▐") maps to worldY = 3 + (3-1-1) = 4
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[3, 4].CropType); // ⌂
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[4, 4].CropType); // ╗
+        Assert.Equal("shed",           gameState.Tiles[5, 4].CropType); // ▐
+
+        // Template row 0 ("...") maps to worldY = 3 + (3-1-0) = 5 (bottom of placed area)
+        Assert.Equal("yard", gameState.Tiles[3, 5].CropType);
+        Assert.Equal("yard", gameState.Tiles[4, 5].CropType);
+        Assert.Equal("yard", gameState.Tiles[5, 5].CropType);
+    }
+
+    [Fact]
+    public void WhenFlipYTrue_ShouldPreserveBuildingOffsetsCorrectly()
+    {
+        // Building offsets are computed in template-space and must still identify the
+        // correct tile within the farmhouse footprint regardless of flipY.
+        var gameState = new GameState(10, 10);
+        gameState.ZoomLevel = 2;
+
+        for (int x = 0; x < 10; x++)
+            for (int y = 0; y < 10; y++)
+                gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, "fallow_plowed");
+
+        PlaceFarmsteadPlot(gameState, _tinyFarmhouse, 3, 3, flipY: true);
+
+        // At (3,3): template row 2, col 0 → tiny_farmhouse with offset (0, 2-1)=(0,1) in template-space
+        Assert.True(gameState.Tiles[3, 3].BuildingOffset.HasValue);
+        Assert.Equal((0, 1), gameState.Tiles[3, 3].BuildingOffset!.Value);
+
+        // At (3,4): template row 1, col 0 → tiny_farmhouse with offset (0, 1-1)=(0,0)
+        Assert.True(gameState.Tiles[3, 4].BuildingOffset.HasValue);
+        Assert.Equal((0, 0), gameState.Tiles[3, 4].BuildingOffset!.Value);
+    }
+
+    [Fact]
+    public void WhenFlipYFalse_LayoutShouldMatchExistingSouthEdgeBehavior()
+    {
+        // Confirms flipY=false produces the same result as the original (no-flipY) path —
+        // yards at the top, farmhouse near the bottom (south road edge).
+        var gameState = new GameState(10, 10);
+        gameState.ZoomLevel = 2;
+
+        for (int x = 0; x < 10; x++)
+            for (int y = 0; y < 10; y++)
+                gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, "fallow_plowed");
+
+        PlaceFarmsteadPlot(gameState, _tinyFarmhouse, 3, 3, flipY: false);
+
+        // Row 0 of template → worldY=3 (yards at top)
+        Assert.Equal("yard",           gameState.Tiles[3, 3].CropType);
+        // Row 1 → worldY=4 (farmhouse)
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[3, 4].CropType);
+        // Row 2 → worldY=5 (farmhouse bottom, near south road)
+        Assert.Equal("tiny_farmhouse", gameState.Tiles[3, 5].CropType);
+    }
+
+    [Fact]
+    public void WhenFlipYTrue_SurroundingTilesShouldRemainUntouched()
+    {
+        var gameState = new GameState(10, 10);
+        gameState.ZoomLevel = 2;
+
+        for (int x = 0; x < 10; x++)
+            for (int y = 0; y < 10; y++)
+                gameState.Tiles[x, y] = new Tile(TileType.Farm, null, null, "fallow_plowed");
+
+        PlaceFarmsteadPlot(gameState, _tinyFarmhouse, 3, 3, flipY: true);
+
+        // Tiles outside the 3×3 area at (3–5, 3–5) must not be modified
+        Assert.Equal(TileType.Farm, gameState.Tiles[2, 3].Type);
+        Assert.Equal(TileType.Farm, gameState.Tiles[6, 3].Type);
+        Assert.Equal(TileType.Farm, gameState.Tiles[3, 2].Type);
+        Assert.Equal(TileType.Farm, gameState.Tiles[3, 6].Type);
     }
 
     // Helper: Get tile appearance
