@@ -1,0 +1,59 @@
+# Livonia, Michigan — 1950
+# A real place: farmland northwest of Detroit, on the edge of postwar expansion.
+# Country roads already run the section lines. Most farms have a house and outbuildings.
+# One school. One cemetery at the northern edge, where the land has been set aside for a while.
+
+[scenario]
+id: livonia_1950
+name: Livonia, Michigan, 1950
+game_type: traditional
+era: 1950
+latitude: 42
+climate_zone: temperate
+
+[description]
+Flat farmland west of Detroit, cut through by country roads. The war is over. Veterans are coming home to the farms their fathers worked, or leaving them for the new subdivisions that are just starting to appear at the edges of Dearborn and Garden City. For now, this is still farm country. You can see it ending.
+
+[backstory]
+Wayne County, 1950. The section roads run north-south and east-west in the old township grid, a quarter mile apart. Most of the farms have been worked for two or three generations. The houses face the road. There's a one-room school on the main intersection. The cemetery at the north end of town has been there since before any of the current farmers were born. Detroit is 15 miles east. The new subdivisions are 5 miles closer than that.
+
+[starting_conditions]
+year: 1950
+population: 0
+money: 10000
+map_size: 80x80
+
+[terrain_generation]
+type: flat_farmland
+farmstead_density: 0.8
+features:
+  - existing_road_grid
+
+[road_grid]
+spacing: 16
+type: dirt_road
+pattern: sparse_grid
+main_vertical_road: true
+main_horizontal_road: true
+
+[camera]
+start_position: center
+
+[initial_land_use]
+farm: 90
+road: 8
+trees: 2
+empty: 0
+
+[placed_buildings]
+school: near_main_intersection
+cemetery: edge_north
+
+[objectives]
+primary: Watch what happens when the subdivisions arrive
+secondary: Preserve at least one working farm through 1960
+
+[challenges]
+- Postwar housing demand will push land values up
+- Road infrastructure will need upgrading as car traffic increases
+- The farms are productive but the farmers are getting older

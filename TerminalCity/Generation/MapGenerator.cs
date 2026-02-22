@@ -58,8 +58,9 @@ public static class MapGenerator
         // Step 3.5: Add field boundaries between plots
         AddFieldBoundaries(gameState, random);
 
-        // Step 3.6: Add farmsteads (house/barn clusters) to some plots
-        AddFarmsteads(gameState, random);
+        // Step 3.6: Add farmsteads (house/barn clusters) to eligible plots.
+        // Density is controlled by scenario.FarmsteadDensity (0.0 = none, 1.0 = all eligible).
+        AddFarmsteads(gameState, scenario, random);
         var farmPlots = gameState.Plots.Count(p => p.Type == PlotType.Farmland);
         Console.WriteLine($"DEBUG: Farm plots: {farmPlots}");
 
@@ -189,6 +190,12 @@ public static class MapGenerator
             {
                 Console.WriteLine($"DEBUG: Failed to load farmstead template");
             }
+        }
+
+        // Step 3.7: Place explicitly specified buildings (school, cemetery, etc.)
+        if (scenario.PlacedBuildings.Count > 0)
+        {
+            PlaceSpecifiedBuildings(gameState, scenario, random);
         }
 
         // Step 4: Add trees/vegetation
@@ -547,9 +554,16 @@ public static class MapGenerator
         }
     }
 
-    private static void AddFarmsteads(GameState gameState, Random random)
+    private static void AddFarmsteads(GameState gameState, Scenario scenario, Random random)
     {
-        // Load farmstead template (for now, just load the first one)
+        // If density is 0 (default), skip farmstead placement entirely.
+        if (scenario.FarmsteadDensity <= 0.0)
+        {
+            Console.WriteLine($"DEBUG: FarmsteadDensity=0, skipping farmstead placement");
+            return;
+        }
+
+        // Load farmstead template
         var farmsteadPath = Path.Combine("definitions", "plots", "plots_farmsteads.txt");
         var template = FarmsteadParser.LoadFromFile(farmsteadPath);
 
@@ -560,19 +574,117 @@ public static class MapGenerator
         }
 
         Console.WriteLine($"DEBUG: Loaded farmstead template: {template.Name} ({template.Width}x{template.Height})");
-        Console.WriteLine($"DEBUG: Checking {gameState.Plots.Count} plots for farmstead placement");
+        Console.WriteLine($"DEBUG: FarmsteadDensity={scenario.FarmsteadDensity}, checking {gameState.Plots.Count} plots");
 
-        int checkedPlots = 0;
+        int placedCount = 0;
         foreach (var plot in gameState.Plots)
         {
             if (plot.Type != PlotType.Farmland) continue;
-            checkedPlots++;
 
-            if (TryPlaceFarmsteadAtRoadEdge(gameState, plot, template, random))
-                return; // For now, only place one farmstead total
+            if (plot.Bounds.Width < template.Width || plot.Bounds.Height < template.Height)
+                continue;
+
+            // Check if there's a road immediately south of this plot
+            int southY = plot.Bounds.Y + plot.Bounds.Height;
+            if (southY >= gameState.MapHeight) continue;
+
+            bool hasRoadSouth = false;
+            for (int x = plot.Bounds.X; x < plot.Bounds.X + plot.Bounds.Width; x++)
+            {
+                if (x < gameState.MapWidth)
+                {
+                    var tile = gameState.Tiles[x, southY];
+                    if (tile.Type == TileType.DirtRoad || tile.Type == TileType.PavedRoad)
+                    {
+                        hasRoadSouth = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasRoadSouth) continue;
+
+            // Apply density: roll per eligible plot
+            if (random.NextDouble() > scenario.FarmsteadDensity) continue;
+
+            int farmsteadX = plot.Bounds.X + (plot.Bounds.Width - template.Width) / 2;
+            int farmsteadY = plot.Bounds.Y + plot.Bounds.Height - template.Height;
+
+            Console.WriteLine($"DEBUG: Placing farmstead at ({farmsteadX},{farmsteadY}) in plot ({plot.Bounds.X},{plot.Bounds.Y})");
+            PlaceFarmstead(gameState, template, farmsteadX, farmsteadY);
+            placedCount++;
         }
 
-        Console.WriteLine($"DEBUG: Checked {checkedPlots} farmland plots, found none suitable for farmstead");
+        Console.WriteLine($"DEBUG: Placed {placedCount} farmsteads (density={scenario.FarmsteadDensity})");
+    }
+
+    /// <summary>
+    /// Places explicitly specified buildings from the scenario's [placed_buildings] section.
+    /// TODO (implementer): Add actual tile placement for each building type.
+    ///   Currently resolves position from the placement hint and marks the tile with a
+    ///   structure CropType string so rendering can display it.
+    ///   Supported building types to implement: "school", "cemetery"
+    ///   Supported placement hints: "near_main_intersection", "edge_north", "edge_south",
+    ///     "edge_east", "edge_west", "x,y" (exact coordinates)
+    /// </summary>
+    private static void PlaceSpecifiedBuildings(GameState gameState, Scenario scenario, Random random)
+    {
+        int centerX = gameState.MapWidth / 2;
+        int centerY = gameState.MapHeight / 2;
+
+        foreach (var spec in scenario.PlacedBuildings)
+        {
+            var pos = Resolveplacement(spec.Placement, gameState, random, centerX, centerY);
+
+            if (pos.X < 0 || pos.X >= gameState.MapWidth || pos.Y < 0 || pos.Y >= gameState.MapHeight)
+            {
+                Console.WriteLine($"DEBUG: Skipping {spec.BuildingType} — resolved position ({pos.X},{pos.Y}) out of bounds");
+                continue;
+            }
+
+            // TODO (implementer): Replace this stub with actual multi-tile building placement
+            // once building definitions exist for school and cemetery.
+            // For now, mark a single tile so the scenario loads and renders something visible.
+            gameState.Tiles[pos.X, pos.Y] = new Tile(TileType.Grass, null, null, spec.BuildingType);
+            Console.WriteLine($"DEBUG: Placed {spec.BuildingType} at ({pos.X},{pos.Y}) [stub — single tile]");
+        }
+    }
+
+    /// <summary>
+    /// Resolves a placement hint string to a map coordinate.
+    /// </summary>
+    private static SadRogue.Primitives.Point Resolveplacement(
+        string placement, GameState gameState, Random random, int centerX, int centerY)
+    {
+        // Exact coordinate: "x,y"
+        var parts = placement.Split(',');
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0].Trim(), out var px) &&
+            int.TryParse(parts[1].Trim(), out var py))
+        {
+            return new SadRogue.Primitives.Point(px, py);
+        }
+
+        int margin = 5; // tiles from edge for "edge_*" placements
+        return placement.ToLower() switch
+        {
+            "near_main_intersection" => new SadRogue.Primitives.Point(
+                centerX + random.Next(-3, 4),
+                centerY + random.Next(-3, 4)),
+            "edge_north" => new SadRogue.Primitives.Point(
+                random.Next(margin, gameState.MapWidth - margin),
+                margin),
+            "edge_south" => new SadRogue.Primitives.Point(
+                random.Next(margin, gameState.MapWidth - margin),
+                gameState.MapHeight - margin - 1),
+            "edge_east" => new SadRogue.Primitives.Point(
+                gameState.MapWidth - margin - 1,
+                random.Next(margin, gameState.MapHeight - margin)),
+            "edge_west" => new SadRogue.Primitives.Point(
+                margin,
+                random.Next(margin, gameState.MapHeight - margin)),
+            _ => new SadRogue.Primitives.Point(-1, -1) // unrecognized — out of bounds signals skip
+        };
     }
 
     /// <summary>

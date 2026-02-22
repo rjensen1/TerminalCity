@@ -99,6 +99,10 @@ public static class ScenarioParser
                 case "camera":
                     ParseCamera(line, scenario);
                     break;
+
+                case "placed_buildings":
+                    ParsePlacedBuildings(line, scenario);
+                    break;
             }
         }
 
@@ -271,6 +275,11 @@ public static class ScenarioParser
             case "features":
                 // Skip - features are on separate lines with '-'
                 break;
+            case "farmstead_density":
+                if (double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var density))
+                    scenario.FarmsteadDensity = Math.Clamp(density, 0.0, 1.0);
+                break;
         }
     }
 
@@ -316,6 +325,26 @@ public static class ScenarioParser
             case "start_position":
                 scenario.CameraStartPosition = valueStr;
                 break;
+        }
+    }
+
+    private static void ParsePlacedBuildings(string line, Scenario scenario)
+    {
+        // Each line is: building_type: placement_hint
+        // e.g. "school: near_main_intersection" or "cemetery: edge_north"
+        var parts = line.Split(':', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2) return;
+
+        var buildingType = parts[0].ToLower().Split('#')[0].Trim();
+        var placement = parts[1].Split('#')[0].Trim();
+
+        if (!string.IsNullOrWhiteSpace(buildingType) && !string.IsNullOrWhiteSpace(placement))
+        {
+            scenario.PlacedBuildings.Add(new PlacedBuildingSpec
+            {
+                BuildingType = buildingType,
+                Placement = placement
+            });
         }
     }
 
