@@ -1485,6 +1485,13 @@ ZoomPattern? GetCropPattern(CropDefinition def)
     if (structureType == "farm_field")
         return ((char)178, Color.Yellow, Color.DarkGoldenrod); // ▒ - farm field pattern
 
+    // Pre-placed scenario buildings (stub rendering — TODO: wire to building definitions)
+    // TODO (implementer): replace with proper BuildingDefinition lookup once definition files exist
+    if (structureType == "school")
+        return ('S', Color.White, Color.DarkBlue);
+    if (structureType == "cemetery")
+        return ('+', Color.LightGray, Color.DarkGray);
+
     // Try to find building definition (check by id)
     var buildingDef = buildingDefinitions.FirstOrDefault(b => b.Id == structureType);
     if (buildingDef != null)
