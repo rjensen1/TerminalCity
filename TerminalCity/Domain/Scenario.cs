@@ -62,6 +62,14 @@ public class Scenario
     public int InitialTreesPercent { get; set; } = 0;
     public int InitialEmptyPercent { get; set; } = 0;
 
+    // Farmstead density: fraction of eligible plots that receive a pre-placed farmstead.
+    // 0.0 = none (default), 1.0 = every eligible plot. Parsed from terrain_generation section.
+    public double FarmsteadDensity { get; set; } = 0.0;
+
+    // Buildings to pre-place at scenario load time (school, cemetery, etc.)
+    // Parsed from [placed_buildings] section. See PlacedBuildingSpec for placement options.
+    public List<PlacedBuildingSpec> PlacedBuildings { get; set; } = new();
+
     /// <summary>
     /// Get formatted description for display in dialog
     /// </summary>
